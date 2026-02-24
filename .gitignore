@@ -1,0 +1,31 @@
+# Using https://github.com/github/gitignore/blob/master/Python.gitignore
+
+# IDE/language servers
+compile_commands.json
+.vscode/
+
+# Notes
+SCRIBBLE.md
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# Distribution / packaging
+build/
+inst/
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Cache directories
+.cache/
+*_cache/
+
+# Run outputs
+run/
+
+# make dev artifacts
+**/*.so
