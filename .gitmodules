@@ -1,0 +1,9 @@
+[submodule "xpm"]
+    path = xpm
+    url = git@github.com:image3kit/xpm.git
+[submodule "snm"]
+    path = snm
+    url = git@github.com:image3kit/snm.git
+[submodule "image3kit"]
+    path = image3kit
+    url = git@github.com:image3kit/image3kit.git
