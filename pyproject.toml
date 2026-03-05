@@ -14,7 +14,6 @@ authors = [
   { name = "Ali Q. Raeini", email = "A.Qaseminejad_Raeini@hw.ac.uk" },
 ]
 requires-python = ">=3.9"
-dependencies = []
 
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -28,9 +27,8 @@ classifiers = [
   "Private :: Do Not Upload",
 ]
 
-
 [dependency-groups]
-test = ["pytest"]
+test = ["pytest", "matplotlib", "scipy", "pandas", "sqlalchemy"]
 dev = [{ include-group = "test" }]
 
 
@@ -48,6 +46,11 @@ filterwarnings = [
   "ignore::pytest.PytestCacheWarning",
 ]
 testpaths = ["tests"]
+markers = [
+    "unit: Quick unit tests that don't depend on external resources",
+    "integration: Tests that interact with multiple components or external systems",
+    "smoke: Critical tests to verify basic functionality after a build",
+]
 
 
 [tool.cibuildwheel]
@@ -67,6 +70,12 @@ xbuild-tools = ["cmake", "ninja"]
 [tool.cibuildwheel.android]
 build-frontend = "build"
 environment.ANDROID_API_LEVEL = "24"
+
+[tool.ruff]
+line-length = 120
+exclude = [
+    "xpm/libs/pnextract",
+]
 
 [tool.ruff.lint]
 extend-select = [
@@ -95,6 +104,9 @@ extend-select = [
 ignore = [
   "PLR09",    # Too many X
   "PLR2004",  # Magic comparison
+  "E702",     # Multiple statements on one line (semicolon)
+  "E701",     # Multiple statements on one line (colon)
+  "T201",     # `print` found, for now
 ]
 isort.required-imports = ["from __future__ import annotations"]
 

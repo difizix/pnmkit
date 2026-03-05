@@ -1,5 +1,23 @@
 from __future__ import annotations
 
-from ._pnmkit import __version__, add, subtract
+from ._pnmkit import (
+    DictCompare,
+    Input,
+    Xdmf,
+    Xdml,
+    __version__,
+    mextract,
+    snflow,
+    stepData,
+)
 
-__all__ = ["__version__", "add", "subtract"]
+__all__ = [
+    "DictCompare",
+    "Input",
+    "Xdmf",
+    "Xdml",
+    "__version__",
+    "mextract",
+    "snflow",
+    "stepData",
+]
