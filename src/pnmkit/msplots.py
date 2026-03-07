@@ -164,7 +164,7 @@ def plotCycls(sims=None,prps=None, icycls=None,outfile="relPerms.svg",addSummary
             for sim in sims:
                 gnmSPKwoR1 = sim.getRes_(prp,icy)
                 try:     datax, datay  = gnmSPKwoR1[:,prp.xcol],  gnmSPKwoR1[:,prp.icol]
-                except Exception as e:  alert(f"not enough data for {prp.name} _{prp.icycl}, sim:{sim.lgnd}, resname: {Path.cwd()/sim.resFile()}: {gnmSPKwoR1}", -1,e)
+                except Exception as e:  alert(f"not enough data for {prp.name} _{prp.icycl}, sim:{sim.lgnd}, resname: {sim.resFile()}: {gnmSPKwoR1}", -1,e)
                 pl=prp.ploT(datax,datay, sim.styl, sim, prp, icy, prp.icol)[0]
                 if len(sim.lgnd) and len(sims)>1: rects.append(pl); legs.append(toCaption(sim.lgnd))
                 if prp.icol2:  prp.ploT(datax,gnmSPKwoR1[:,prp.icol2], sim.styl, sim, prp, icy, prp.icol2)
@@ -387,7 +387,7 @@ def AllRunPlotXNMSP(workdir, mtds=None, inp=None, pltNam="KabsFF", tag="", runfs
     try: os.chdir(workdir)
     except OSError:  DbgMsg(f"Error cannot get into {workdir}/, from {Path.cwd()}");  sys.exit(-1)
 
-    inp.setdefault("cycle1",  ""  )
+    inp.setdefault("Cycle1",  ""  )
     simss = [];     Difs = {}
     imgs = getPWDImages(hdrs)
     ensure(len(imgs),f"Error: no .mhd images found in {workdir}, pwd:{Path.cwd()}",1)   #raise ValueError('Error: no .mhd images found in ' + workdir); return -1
@@ -397,8 +397,8 @@ def AllRunPlotXNMSP(workdir, mtds=None, inp=None, pltNam="KabsFF", tag="", runfs
     mrkrs[0].ms=2;  mrkrs[0].lw = 1
     for ii in range(1,len(mrkrs)):        mrkrs[ii].ms=4  ;    mrkrs[ii].lw = 0
     inpt=copy.deepcopy(inp)
-    inpt["CALC_BOX"]= "0. 1."
-    inpt["EQUIL_CON_ANG"]= "4   30  50  -0.2    -3.   rand   0."
+    inpt["UpscaleBox"]= "0. 1."
+    inpt["AlterContAng"]= "4   30  50  -0.2    -3.   rand   0."
     simsAll = []
     legsI72 = []
     for jj,mtd in enumerate(mtds) :
@@ -485,13 +485,13 @@ def runSensitivityXNMSP(workdir, mtds=None, key1="", rang1=None, key2="", rang2=
 
 def runPlotXNMScannings(mtd,pltPrfix, img, prp1s, prp2s,inp, prp1=CAdv, prp2=pSwi, doRun=True, doPlot=True, nImgs=2, clrSchem=sriGrad, addExp=False) : # sync with AllRunQueueXNMTwoPhase
     inpt=copy.deepcopy(inp)
-    inpt.setdefault("CALC_BOX", "0.2 0.9")
-    if len(autoInitCA): inpt.setdefault("INIT_CONT_ANG", autoInitCA  ) # disp({'autoInitCA':autoInitCA})
-    inpt.setdefault("networkDir",  VoxImg.netDir                        )
-    inpt.setdefault("cycle2",  "1.    -1.0E+05     0.02       T        T"  )
+    inpt.setdefault("UpscaleBox", "0.2 0.9")
+    if len(autoInitCA): inpt.setdefault("InitContAng", autoInitCA  ) # disp({'autoInitCA':autoInitCA})
+    inpt.setdefault("NetworkDir",  VoxImg.netDir                        )
+    inpt.setdefault("Cycle2",  "1.    -1.0E+05     0.02       T        T"  )
     # inpt.setdefault('cycle3',  '0.     1.0E+05     0.02       T        T'  )
-    inpt.setdefault("cycle1_BC",  "T     F       T       T      DP    1.  1.")
-    inpt.setdefault("cycle2_BC",  "T     F       T       T      DP    1.  1.")
+    inpt.setdefault("Cycle1_BC",  "T     F       T       T      DP    1.  1.")
+    inpt.setdefault("Cycle2_BC",  "T     F       T       T      DP    1.  1.")
     # inpt.setdefault('cycle3_BC',  'T     F       T       T      DP    1.  1.')
 
     simsAll = []
@@ -527,16 +527,16 @@ def runPlotXNMScannings(mtd,pltPrfix, img, prp1s, prp2s,inp, prp1=CAdv, prp2=pSw
         pltTag=mtd.mNam
         plotCycls(simsI72Pc,plPcKrRI, icycls=plIcycls, outfile=pltPrfix+"_Swis_"+pltTag+"_PcKrRI.svg")
         if len(prp2s)>1:
-            plotPropsCompact(simsI72Pc,[plPc,], icycls=plIcycls, outfile=pltPrfix+"_Swis_"+pltTag+"_PcCmpct.svg",addSummary=False)
-            plotPropsCompact(simsI72Pc,[plKr,], icycls=plIcycls, outfile=pltPrfix+"_Swis_"+pltTag+"_KrCmpct.svg",addSummary=False)
+            plotPropsCompact(simsI72Pc,[plPc,], icycls=plIcycls, outfile=pltPrfix+"_Swis_"+pltTag+"_PcCmpct.svg", addSummary=False)
+            plotPropsCompact(simsI72Pc,[plKr,], icycls=plIcycls, outfile=pltPrfix+"_Swis_"+pltTag+"_KrCmpct.svg", addSummary=False)
 
             if(addExp): simsSwI72.append([FlowSim("","",img,mEx,sEX,{})]); legsI72.append("Experiment")
             plotSiSr(simsSwI72,legsI72,[pSgr], outfile=pltPrfix+"_Swis_"+pltTag+"_SiSr.svg")
 
         simsI72Pc0=simsI72Pc0_
-        plotPropsCompact(simsI72Pc0,[plPc,], icycls=plIcycls, outfile=pltPrfix+"_Swi0_"+pltTag+"_PcCmpct.svg",addSummary=False)
-        plotPropsCompact(simsI72Pc0,[plKr,], icycls=plIcycls, outfile=pltPrfix+"_Swi0_"+pltTag+"_KrCmpct.svg",addSummary=False)
-        plotPropsCompact(simsI72Pc0,[plRI,], icycls=plIcycls, outfile=pltPrfix+"_Swi0_"+pltTag+"_RICmpct.svg",addSummary=False)
+        plotPropsCompact(simsI72Pc0,[plPc,], icycls=plIcycls, outfile=pltPrfix+"_Swi0_"+pltTag+"_PcCmpct.svg", addSummary=False)
+        plotPropsCompact(simsI72Pc0,[plKr,], icycls=plIcycls, outfile=pltPrfix+"_Swi0_"+pltTag+"_KrCmpct.svg", addSummary=False)
+        plotPropsCompact(simsI72Pc0,[plRI,], icycls=plIcycls, outfile=pltPrfix+"_Swi0_"+pltTag+"_RICmpct.svg", addSummary=False)
 
     return simsAll
 

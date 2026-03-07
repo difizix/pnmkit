@@ -41,17 +41,19 @@ Xdml runXcanStages(py::dict inp_obj)  {
     InputFile inp_cpy = pyCastInput(inp_obj);
     inp_cpy.initIO();
     Xdml xdmfl("");
-    std::string ntf = inp_cpy.getOr("networkFile", std::string("_.msm"));
-    if(hasExt(ntf,".msm") || hasExt(ntf,"_ms.xmf") || ntf.substr(0,12)=="synthetizeNet_") {
+    std::string ntf = inp_cpy.getOr("NetworkFile", std::string("_ms.xmf"));
+    if(hasExt(ntf,"_ms.xmf") || ntf.substr(0,12)=="SynthetizeNet_") {
         #ifdef BildMSM
         auto ret =  runWettabilityScanStages(inp_cpy, snflowQD);
         if(ret) return ::std::move(*ret);
         #endif //BildMSM
+        // else
         alert(".msm network format is not available in this version.",-1);
     }
     else {
         #ifdef BildPNM
-        // return   runWettabilityScanStages(inp_cpy, cnflowQD);
+        auto ret = runWettabilityScanStages(inp_cpy, cnflowQD);
+        if(ret) return ::std::move(*ret);
         #endif //BildPNM
         alert("cnflow is not available here, please contact us if you need it...",-1);
     }

@@ -194,7 +194,7 @@ class Method: # this stands for simulation/.. method
         my.mtdstyl = styl
         my.app = cmdapp
         my.outsfx = outsfx
-        my.netsfx = netsfx # without .msm or .xmf, these are used in runSim=runXNFlow
+        my.netsfx = netsfx # without .xmf, these are used in runSim=runXNFlow
         my.runSim = runSim # called from FlowSim.runSim()
         if resPrefix is not None:
             my.resPrefix = resPrefix
@@ -343,11 +343,11 @@ try : #'Props' # to make it a class named `Proptis``
     pnTg =Prop("pnTg", "Network tag" , "Network" ) # efect of voxel size ...
 
     Clay =Prop("Clay", "$S_w$ sub-res.", "sub-resolution porosity",[0,1], "AddClay")
-    CAdv =Prop("CAdv", "$θ_{adv}$", "advancing contact$~$angle",[0,180], "EQUIL_CON_ANG");  CAdv.valBfor="4 "; CAdv.valAftr=" 0.2 -3.  rand   0."
-    CBox =Prop("CBox", "$k_r$ Calc Box", "upscaling bounds",[0.,1.], "CALC_BOX")
-    NpIm =Prop("NpIm", "Pressure drop", "pressure difference", [0.,1.], "cycle2_BC");      NpIm.valBfor="T   F       T   T      DP   "
-    pSwi =Prop("Swi",  "$S_{wi}$", "initial water saturation" , [0.,1.],"cycle1");   pSwi.valAftr= "  1e5   0.025     T   T"
-    pPci =Prop("Pci",  "$P_{ci}$", "initial capillary pressure",[0.,1e5] ,"cycle1"); pPci.valBfor="0. "; pPci.valAftr = "   0.05     T   T"
+    CAdv =Prop("CAdv", "$θ_{adv}$", "advancing contact$~$angle",[0,180], "AlterContAng");  CAdv.valBfor="4 "; CAdv.valAftr=" 0.2 -3.  rand   0."
+    CBox =Prop("CBox", "$k_r$ Calc Box", "upscaling bounds",[0.,1.], "UpscaleBox")
+    NpIm =Prop("NpIm", "Pressure drop", "pressure difference", [0.,1.], "Cycle2_BC");      NpIm.valBfor="T   F       T   T      DP   "
+    pSwi =Prop("Swi",  "$S_{wi}$", "initial water saturation" , [0.,1.], "Cycle1");   pSwi.valAftr= "  1e5   0.025     T   T"
+    pPci =Prop("Pci",  "$P_{ci}$", "initial capillary pressure",[0.,1e5], "Cycle1");  pPci.valBfor="0. "; pPci.valAftr = "   0.05     T   T"
 
     for prp in [plPc,plKr,plKw,plKo,plRI,OilR,pSgr,pSor,pSwD] : prp.kywrd="_SwPcKrwKroRI_cycle"; prp.nSkip = 2;  prp.endKy = "\n\n"
 
@@ -355,65 +355,64 @@ try : #'Props' # to make it a class named `Proptis``
 
     # snflow calibration, old
 
-    DelPw = Prop("DelPw",r"${\Delta}P_w$", "Water viscous pressure difference",[0,1000],"cycle2_BC");  DelPw.valBfor="T F  T T  DP "; DelPw.valAftr=" 1"
-    DelPo = Prop("DelPo",r"${\Delta}P_o$",   "Oil viscous pressure difference",[0,1000],"cycle2_BC");  DelPo.valBfor="T F  T T  DP  1 "
+    DelPw = Prop("DelPw",r"${\Delta}P_w$", "Water viscous pressure difference", [0,1000], "Cycle2_BC");  DelPw.valBfor="T F  T T  DP "; DelPw.valAftr=" 1"
+    DelPo = Prop("DelPo",r"${\Delta}P_o$",   "Oil viscous pressure difference", [0,1000], "Cycle2_BC");  DelPo.valBfor="T F  T T  DP  1 "
 
-    Alfact = Prop("Alfact","Alfact", "Layer area coefficient",[0,2],"Alfact")
+    Alfact = Prop("Alfact","Alfact", "Layer area coefficient", [0,2], "Alfact")
 
-    btaKcpl = Prop("btaKcpl","btaKcpl", "cos beta+theta mult factor",[0,1],"btaKcpl"  )
+    btaKcpl = Prop("btaKcpl","btaKcpl", "cos beta+theta mult factor", [0,1], "btaKcpl"  )
 
-    cTortu = Prop("cTortu","Corner Tortuosity",   "corner Tortuosity coefficient",[0,1] )
-    mrgLvl = Prop("mrgLvl","Merge levels 2&3?","merge corner sublevels 2&3?",[0,1])
-    cExchV = Prop("cExchV","redistribute Vol","redistribute corner volumes",[0,1] )
-    cSmotA = Prop("cSmotA","Smooth corners?","Smooth pore-to-throat corner$~$area?",[0,1])
-    pSatFr = Prop("pSatFr","layer volume @pore", "pore saturation contribution",[0,1])
-    xKcplT = Prop("xKcplT","xKcplT",      "piston-like threshold-$P_c$ scale",[0,1])
-    xKcplP = Prop("xKcplP","xKcplP", "pore piston-like threshold-$P_c$ scale",[0,1] )
-    nAjCrs = Prop("nAjCrs","Corner connectivity", "corner connectivity number",[0,1],"nAjCrs"  )
+    cTortu = Prop("cTortu","Corner Tortuosity",   "corner Tortuosity coefficient", [0,1] )
+    mrgLvl = Prop("mrgLvl","Merge levels 2&3?","merge corner sublevels 2&3?", [0,1])
+    cSmotA = Prop("cSmotA","Smooth corners?","Smooth pore-to-throat corner$~$area?", [0,1])
+    pSatFr = Prop("pSatFr","layer volume @pore", "pore saturation contribution", [0,1])
+    xKcplT = Prop("xKcplT","xKcplT",      "piston-like threshold-$P_c$ scale", [0,1])
+    xKcplP = Prop("xKcplP","xKcplP", "pore piston-like threshold-$P_c$ scale", [0,1] )
+    nAjCrs = Prop("nAjCrs","Corner connectivity", "corner connectivity number", [0,1],"nAjCrs"  )
     pisKcS = Prop("pisKcS",r"$S_{w,pist}$",       r"$S_w$ piston-like curvature coefficient", [0,1])
-    ptEx12 = Prop("ptEx12","ptEx12",   "throat expansion coefficients 1&2",[0,1],"ptExs");  ptEx12.valAftr=" 0"; """ Error wrong after"""
-    ptEx23 = Prop("ptEx23","ptEx23",   "throat expansion coefficients 2&3",[0,1],"ptExs");  ptEx23.valBfor="1 "
-    crnKGa = Prop("crnKGa",r"$C^{kq}_\gamma$", "conductance corner-angle coefficient",[0,0.1])
-    crnKX1 = Prop("crnKX1",r"$C^{kq}_1$",         "conductance coefficient-1",[0,1],"crnKXs" );        crnKX1.valAftr=" 1.5 1"
-    crnKX2 = Prop("crnKX2",r"$C^{kq}_2$",         "conductance coefficient-2",[0,1],"crnKXs" );        crnKX2.valBfor="0.05 "; crnKX2.valAftr=" 1"
-    crnKX3 = Prop("crnKX3",r"$C^{kq}_3$",         "conductance coefficient-3",[0,1],"crnKXs" );        crnKX3.valBfor="0.05 1.5 "
-    sagKcP = Prop("sagKcP",r"$K_{c,sagi}^{pore}$",  "pore sagittal curvature coefficient",[0,5])
-    sagKcT = Prop("sagKcT",r"$K_{c,sagi}^{throat}$",r"throat sagittal curvature coefficient",[0,5])
+    ptEx12 = Prop("ptEx12","ptEx12",   "throat expansion coefficients 1&2", [0,1],"ptExs");  ptEx12.valAftr=" 0"; """ Error wrong after"""
+    ptEx23 = Prop("ptEx23","ptEx23",   "throat expansion coefficients 2&3", [0,1],"ptExs");  ptEx23.valBfor="1 "
+    crnKGa = Prop("crnKGa",r"$C^{kq}_\gamma$", "conductance corner-angle coefficient", [0,0.1])
+    crnKX1 = Prop("crnKX1",r"$C^{kq}_1$",         "conductance coefficient-1", [0,1],"crnKXs" );        crnKX1.valAftr=" 1.5 1"
+    crnKX2 = Prop("crnKX2",r"$C^{kq}_2$",         "conductance coefficient-2", [0,1],"crnKXs" );        crnKX2.valBfor="0.05 "; crnKX2.valAftr=" 1"
+    crnKX3 = Prop("crnKX3",r"$C^{kq}_3$",         "conductance coefficient-3", [0,1],"crnKXs" );        crnKX3.valBfor="0.05 1.5 "
+    sagKcP = Prop("sagKcP",r"$K_{c,sagi}^{pore}$",  "pore sagittal curvature coefficient", [0,5])
+    sagKcT = Prop("sagKcT",r"$K_{c,sagi}^{throat}$",r"throat sagittal curvature coefficient", [0,5])
 
     crKqPis = Prop("crKqPis",r"$C^{kq}_{pist}$", "piston-like conductivity coefficient", [0,1],"crKqPis")
     eKqPist = Prop("eKqPist",r"$F^{kq}_{pist}$", "piston-like conductivity exponent", [0,1],"eKqPist")
-    eKqCntr = Prop("eKqCntr",r"$F^{kq}_{cntr}$", "centre-phase conductivity exponent",[0,1],"eKqCntr")
+    eKqCntr = Prop("eKqCntr",r"$F^{kq}_{cntr}$", "centre-phase conductivity exponent", [0,1],"eKqCntr")
 
-    CArc =Prop("CArc", r"$θ_{rec}$", "receding contact$~$angle",[0,180], "INIT_CONT_ANG");   CArc.valBfor="1 "; CArc.valAftr=" 0.2 -3.   rand   0."
-    CAdv =Prop("CAdv", r"$θ_{adv}$", "advancing contact$~$angle",[0,180], "EQUIL_CON_ANG");  CAdv.valBfor="4 "; CAdv.valAftr=" 0.2 -3.  rand   0."
-    Clay =Prop("Clay", r"$S_w$ sub-res.", "sub-resolution porosity",[0,1], "AddClay")
+    CArc =Prop("CArc", r"$θ_{rec}$", "receding contact$~$angle", [0,180], "InitContAng");   CArc.valBfor="1 "; CArc.valAftr=" 0.2 -3.   rand   0."
+    CAdv =Prop("CAdv", r"$θ_{adv}$", "advancing contact$~$angle", [0,180], "AlterContAng");  CAdv.valBfor="4 "; CAdv.valAftr=" 0.2 -3.  rand   0."
+    Clay =Prop("Clay", r"$S_w$ sub-res.", "sub-resolution porosity", [0,1], "AddClay")
 
-    AAow = Prop("AAow","$θ_{frac}$", "fractionally altered contact$~$angle",[0,180],"FRAC_CONT_ANG");     AAow.valBfor="4 "; AAow.valAftr=" 0.2 -3.   rand   0."
-    AAal = Prop("AAal","$θ_{all}$", "Advancing contact$~$angles",[0,180],"FRAC_CONT_ANG");     AAal.valBfor="4 ";   AAal.valAftr=" 0.2 -3.   rand   0." # same as AAow but use for spatially correlated single-wettability distribution
-    AAfr = Prop("AAfr","Altered-wet fraction", "altered contact$~$angle fraction",[0,180],"FRAC_CONT_OPT"); AAfr.valAftr=" V   O  corr O    1   3   0.2 -3.    rand"
-    AAxC = Prop("AAxC","$θ_{frac}$ cor.len.","wettability spatial correlation",[0,180],"FRAC_CONT_OPT");  AAxC.valBfor="0.7 V   O  corr O  "; AAxC.valAftr="  0.2 -3.    rand"
+    AAow = Prop("AAow","$θ_{frac}$", "fractionally altered contact$~$angle", [0,180],"FracContAng");     AAow.valBfor="4 "; AAow.valAftr=" 0.2 -3.   rand   0."
+    AAal = Prop("AAal","$θ_{all}$", "Advancing contact$~$angles", [0,180],"FracContAng");     AAal.valBfor="4 ";   AAal.valAftr=" 0.2 -3.   rand   0." # same as AAow but use for spatially correlated single-wettability distribution
+    AAfr = Prop("AAfr","Altered-wet fraction", "altered contact$~$angle fraction", [0,180],"FracContOpt"); AAfr.valAftr=" V   O  corr O    1   3   0.2 -3.    rand"
+    AAxC = Prop("AAxC","$θ_{frac}$ cor.len.","wettability spatial correlation", [0,180],"FracContOpt");  AAxC.valBfor="0.7 V   O  corr O  "; AAxC.valAftr="  0.2 -3.    rand"
 
-    FOrC = Prop("FOrC","$θ_{frac}$ R.cor.", "fractional-wettability radius correlation",[0,180],"FRAC_CONT_OPT");   FOrC.valBfor="0.7  V   O  corr O    1   3   0.2 -3. "
-    CArC = Prop("CArC","$θ_{adv}$ R.cor.", "contact$~$angle radius correlation",[0,180],"EQUIL_CON_ANG");  CArC.valBfor="-1 TOSET 4  CAmin CAmax 0.2 -3."; CArC.valAftr="  0."
-    FRrC = Prop("FRrC","$θ_{adv}$ R.cor.", "contact$~$angle radius correlation",[0,180],"FRAC_CONT_ANG");  FRrC.valBfor="-1 TOSET 4  CAmin CAmax 0.2 -3."; FRrC.valAftr="  0."
+    FOrC = Prop("FOrC","$θ_{frac}$ R.cor.", "fractional-wettability radius correlation", [0,180],"FracContOpt");   FOrC.valBfor="0.7  V   O  corr O    1   3   0.2 -3. "
+    CArC = Prop("CArC","$θ_{adv}$ R.cor.", "contact$~$angle radius correlation", [0,180],"AlterContAng");  CArC.valBfor="-1 TOSET 4  CAmin CAmax 0.2 -3."; CArC.valAftr="  0."
+    FRrC = Prop("FRrC","$θ_{adv}$ R.cor.", "contact$~$angle radius correlation", [0,180],"FracContAng");  FRrC.valBfor="-1 TOSET 4  CAmin CAmax 0.2 -3."; FRrC.valAftr="  0."
     def setAllRMaxMinRand(sim, prp, val):  sim.setInpTag(FOrC, val) ;   sim.setInpTag(CArC, val) ;   sim.setInpTag(FRrC, val)  # noqa: ARG001
-    FArC = Prop("FArC", "$θ_{adv}$ R.cor.", "contact$~$angle radius correlation",[0,180]);  FArC.setFunc = setAllRMaxMinRand
+    FArC = Prop("FArC", "$θ_{adv}$ R.cor.", "contact$~$angle radius correlation", [0,180]); FArC.setFunc = setAllRMaxMinRand
 
-    rufBias = Prop("rufBias","RcRoughBias", "radius shift due to filters",[0,5],"RcRoughBias")
-    RcRnd = Prop("RcRnd","maxRcRandness", "uncertainty in inscribed radius",[0,5],"maxRcRandness")
-    PcRnd = Prop("PcRnd","maxPcRandness", "relative uncertainty in inscribed radius",[0,5],"maxPcRandness")
+    rufBias = Prop("rufBias","RcRoughBias", "radius shift due to filters", [0,5],"RcRoughBias")
+    RcRnd = Prop("RcRnd","maxRcRandness", "uncertainty in inscribed radius", [0,5],"maxRcRandness")
+    PcRnd = Prop("PcRnd","maxPcRandness", "relative uncertainty in inscribed radius", [0,5],"maxPcRandness")
 
-    slvTyp = Prop("slvTyp", "solver type", "solver type",[0,5],"solver");           slvTyp.valAftr=" 1e-18 1e-29  1000  F  F  1e18"
-    slvTol = Prop("slvTol", "solver tolerance", "solver tolerance",[0,1],"solver"); slvTol.valBfor="1 ";  slvTol.valAftr=" 1e-29  1000  F  F  1e18"
-    slvCut = Prop("slvCut", "cond. cut-off", "solver cond. cut-off",[0,1],"solver"); slvCut.valBfor="1  1e-18 "; slvCut.valAftr="  1000  F  F  1e18"
-    slvCap = Prop("slvCap", "cond. cap factor","solver cond. cap factor",[0,1],"solver"); slvCap.valBfor="1  1e-18 1e-29 "; slvCap.valAftr="   F  F  1e18"
-    slvScl = Prop("slvScl", "solver scale", "solver scale factor",[0,1],"solver");      slvScl.valBfor="1  1e-18 1e-29  1000  F  F "
-    btaKcpl2 = Prop("btaKcpl2", "btaKcpl2", "cos$~$β+θ coefficient$~$2",[0,1.2])
-    btaKcpl  = Prop("btaKcpl", "btaKcpl", "cos$~$β+θ coefficient$~$1",[0,1.2])
-    HplCor  = Prop("HplCor", "HplCor", "Throat perimeter correction",[0,1.2]) # @throat
-    AplCor  = Prop("AplCor", "AplCor", "Throat area correction",[0,1.2])
-    HprCor  = Prop("HprCor", "HprCor", "Pore perimeter correction",[0,1.2]) # @pore
-    AprCor  = Prop("AprCor", "AprCor", "Pore area correction",[0,1.2])
+    slvTyp = Prop("slvTyp", "solver type", "solver type", [0,5],"Solver");           slvTyp.valAftr=" 1e-18 1e-29  1000  F  F  1e18"
+    slvTol = Prop("slvTol", "solver tolerance", "solver tolerance", [0,1],"Solver"); slvTol.valBfor="1 ";  slvTol.valAftr=" 1e-29  1000  F  F  1e18"
+    slvCut = Prop("slvCut", "cond. cut-off", "solver cond. cut-off", [0,1],"Solver"); slvCut.valBfor="1  1e-18 "; slvCut.valAftr="  1000  F  F  1e18"
+    slvCap = Prop("slvCap", "cond. cap factor","solver cond. cap factor", [0,1],"Solver"); slvCap.valBfor="1  1e-18 1e-29 "; slvCap.valAftr="   F  F  1e18"
+    slvScl = Prop("slvScl", "solver scale", "solver scale factor", [0,1],"Solver");      slvScl.valBfor="1  1e-18 1e-29  1000  F  F "
+    btaKcpl2 = Prop("btaKcpl2", "btaKcpl2", "cos$~$β+θ coefficient$~$2", [0,1.2])
+    btaKcpl  = Prop("btaKcpl", "btaKcpl", "cos$~$β+θ coefficient$~$1", [0,1.2])
+    HplCor  = Prop("HplCor", "HplCor", "Throat perimeter correction", [0,1.2]) # @throat
+    AplCor  = Prop("AplCor", "AplCor", "Throat area correction", [0,1.2])
+    HprCor  = Prop("HprCor", "HprCor", "Pore perimeter correction", [0,1.2]) # @pore
+    AprCor  = Prop("AprCor", "AprCor", "Pore area correction", [0,1.2])
 except: raise
 
 
@@ -440,10 +439,10 @@ class FlowSim: # Flow simulation data (Method, image, parameters .series style)
         img=my.img; mtd=my.mtd
         disp(f"\n\n{nam}, FlowSim.{mtd.name}.{mtd.runSim.__name__} from {Path.cwd()}, {my.tag}") # : {my.keyVals}
         ret = mtd.runSim(kwrds=my.keyVals, netnam=img.netname(mtd), resSuffix=my.tag, forceRun=forceRun, netDir=img.netDir, **mtd.simArgs())
-        ensure(ret==0, f"Failed: {mtd.name}.{mtd.runSim.__name__} on {img.name}, see {Path.cwd()}{my.logFile()}")
+        ensure(ret==0, f"Failed: {mtd.name}.{mtd.runSim.__name__} on {img.name}, see {my.logPath()}")
         return ret
 
-    def setInpTag(my, prp,val):
+    def setInpTag(my, prp: Prop, val):
         if prp.setFunc :
             tag=my.tag
             prp.setFunc(my,prp,val)
@@ -457,7 +456,7 @@ class FlowSim: # Flow simulation data (Method, image, parameters .series style)
             my.simres[prp.name] = val
             my.tag +=  prp.name+str(val)
 
-    def getRes_(my, prp, icycl=0):#, pTg=''
+    def getRes_(my, prp: Prop, icycl=0):#, pTg=''
         # ky=prp.name+pTg+(str(icycl) if icycl else '')
         ky=prp.name+(str(icycl) if icycl else "")
         if ky in my.simres : return my.simres[ky]
@@ -473,23 +472,24 @@ class FlowSim: # Flow simulation data (Method, image, parameters .series style)
         my.simres[ky] = res
         return res
 
-    def getRes(my, prp, icycl=0):
+    def getRes(my, prp: Prop, icycl=0):
         if abs(prp.unit-1)>0.01 and prp.unit>1e-11:  disp(f"{prp.name}.unit: {prp.unit}")
         return my.getRes_(prp,icycl)/prp.unit
     def resName(my):          return my.img.netname(my.mtd)+my.tag
-    def resFile(my,prp=pNon): return my.mtd.resPrefix+my.resName()+prp.filExt+ my.mtd.outsfx
-    def logFile(my):          return f"{my.mtd.resPrefix}{my.resName()}_{my.mtd.app}.log"
+    def resPath(my, prp: Prop=pNon) -> Path: return Path(my.mtd.resPrefix+my.resName()+prp.filExt+ my.mtd.outsfx).absolute()
+    def resFile(my, prp: Prop=pNon) -> str:  return str(Path(my.mtd.resPrefix+my.resName()+prp.filExt+ my.mtd.outsfx).absolute())
+    def logPath(my) -> Path:          return Path(f"{my.mtd.resPrefix}{my.resName()}_{my.mtd.app}.log").absolute()
 
-    def getLines(my, prp):  # read and catch output files as strings
+    def getLines(my, prp: Prop) -> str:  # read and catch output files as strings
         nam=f"_{prp.filExt}"  # = my.resFile(prp)
         if not my.resStrs_.get(nam):
-            with Path(my.resFile(prp)).open() as f:
+            with my.resPath(prp).open() as f:
                 my.resStrs_[nam] = f.read()
         return my.resStrs_.get(nam)
 
-    def getLogs(my):
+    def getLogs(my) -> str:
         if not my.logs_:
-            with Path(my.logFile()).open() as f:
+            with my.logPath().open() as f:
                 my.logs_ = f.read()
         return my.logs_
 
@@ -532,8 +532,8 @@ class UncSim: # Uncertainity quantification using a set of FlowSim, by default t
         runPar(my.sims,my.nProc)
 
     def resName(my):    return f"Unc-{my.img.name}{my.tag}"
-    def resFile(my, prp=pNon): raise RuntimeError("Unc Sim:resFile")  # noqa: ARG002, EM101
-    def logFile(my):          raise RuntimeError("Unc Sim:logFile")  # noqa: EM101
+    def resPath(my, prp=pNon): raise RuntimeError("Unc Sim:res Path")  # noqa: ARG002, EM101
+    def logPath(my):          raise RuntimeError("Unc Sim:log Path")  # noqa: EM101
 
     def setInpTag(my, prp,val):
         for sim in my.sims: sim.setInpTag(prp,val)

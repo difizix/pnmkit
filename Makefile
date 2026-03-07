@@ -7,6 +7,7 @@ help:
 	@echo "  make test_integrations         # Run integration tests, slow"
 	@echo "  make dev          # Fast incremental build for development"
 	@echo "  make dev_test     # Run tests"
+	@echo "  make dev_test  test_dir=run1   # Run tests, keep results"
 	@echo "  make dev_test_integrations     # Run integration tests"
 	@echo "  make format file=path/to/file  # Format a specific python file or all files"
 	@echo "For running indivudial tests use, e.g.:"
@@ -39,11 +40,17 @@ dev: setup_venv
 	CMAKE_INSTALL_MODE=SYMLINK_OR_COPY .venv/bin/cmake --install build
 	$(MAKE) dev_test
 
+test_dir ?=
+pytest_args ?=
+ifneq ($(test_dir),)
+  pytest_args += --basetemp=$(test_dir)
+endif
+
 dev_test:
-	PYTHONPATH=inst:image3kit/src .venv/bin/python -m pytest -m "not integration"
+	PYTHONPATH=inst:image3kit/src .venv/bin/python -m pytest -m "not integration" $(pytest_args)
 
 dev_test_integrations:
-	PYTHONPATH=inst:image3kit/src .venv/bin/python -m pytest -m integration tests/pnmkit -v -s
+	PYTHONPATH=inst:image3kit/src .venv/bin/python -m pytest -m integration tests/pnmkit -v -s $(pytest_args)
 
 stubgen:
 	@[ -f .venv/bin/pybind11-stubgen ] || (set -x && ${pyPip} install pybind11-stubgen)
@@ -80,3 +87,8 @@ clean:
 pre-commit:
 	.venv/bin/pre-commit run -a || .venv/bin/pre-commit run -a \
 	|| ! printf "\nThe following might help: \n%s\n\n" ".venv/bin/ruff check --unsafe-fixes --fix"
+
+format-uncrustify:
+	export PATH=$(PWD)/../uncrustify/build:$(PATH) && cd snm &&\
+	find . -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \
+	  | xargs uncrustify -c uncrustify.cfg --no-backup --replace

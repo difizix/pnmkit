@@ -38,7 +38,7 @@ minimum-version = "build-system.requires"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config", "--basetemp=./run_pytest"]
 xfail_strict = true
 log_level = "INFO"
 filterwarnings = [

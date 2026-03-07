@@ -106,7 +106,7 @@ def xpm_json_to_snm_tsv(
     assert poro is not None
     assert perm is not None
     output = []
-    output.append(f"porousRock:     {name}\n")
+    output.append(f"RockType:  {name}\n")
     output.append(f"{name}_porosity:           {poro} ;")
     output.append(f"{name}_permeability:       {perm} ;")
     output.append(f"{name}_formationfactor:    {1.0 / poro if poro > 0 else 1.0} ;")
@@ -207,7 +207,7 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
 
     # 4. Map SNM keywords
     # Contact Angle
-    ca_str = kwrds.get("EQUIL_CON_ANG", "")
+    ca_str = kwrds.get("AlterContAng", "")
     if ca_str:
         parts = ca_str.split()
         if len(parts) >= 3:

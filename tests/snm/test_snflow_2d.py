@@ -59,7 +59,7 @@ def test_snflow_2d(tmp_path, monkeypatch, img_name_ext):
     assert Path(f"{img_name}3D.mhd").exists()
 
     # 2. Network extraction with pnmkit
-    extract_params = {"name": f"{img_name}3D", "overwrite": "T", "void_range": "0 0"}
+    extract_params = {"OutputName": f"{img_name}3D", "Overwrite": "T", "VoidRange": "0 0"}
     nm.mextract(img, extract_params)
     assert Path(f"{img_name}3D_ms.xmf").exists()  # network file
 
@@ -68,30 +68,29 @@ def test_snflow_2d(tmp_path, monkeypatch, img_name_ext):
         "WaterOil": "0.05",
         "Water": "0.001 1.2 1000.",
         "Oil": "0.001 1000 1000.",
-        "CALC_BOX": "0.1 0.9",
-        "cycle1": "0. 1.0E+05 0.05 T T",
-        "cycle2": "1. -5.0E+04 0.05 T T",
-        "cycle3": "0. 1.0E+05 0.05 T T",
-        "INIT_CONT_ANG:": "1 0 1 0.25 -1.0 rand 0.",
-        "RAND_SEED:": "1001",
-        "overwrite": "T",
-        "writeXmf": "1 14 14 14",
-        "networkFile": f"{img_name}3D_ms.xmf",
-        "oldAlg": "F",
+        "UpscaleBox": "0.1 0.9",
+        "Cycle1": "0. 1.0E+05 0.05 T T",
+        "Cycle2": "1. -5.0E+04 0.05 T T",
+        "Cycle3": "0. 1.0E+05 0.05 T T",
+        "RandSeed:": "1001",
+        "Overwrite": "T",
+        "WriteXmf": "1 14 14 14",
+        "NetworkFile": f"{img_name}3D_ms.xmf",
+        "InitContAng:": "1   0   1   0.25 -1.0  rand  0.",
     }
 
     cases = [
-        ("C30A60", "3 30 60 0.25 -1.0 rand 0."),
-        ("C60A90", "3 60 90 0.25 -1.0 rand 0."),
-        ("C120A150", "3 120 150 0.25 -1.0 rand 0."),
+        ("C30A60",   "3  30  60   0.25 -1.0  rand  0."),
+        ("C60A90",   "3  60  90   0.25 -1.0  rand  0."),
+        ("C120A150", "3 120 150   0.25 -1.0  rand  0."),
     ]
 
     for suffix, angle in cases:
         p = base_params.copy()
         name = f"{img_name}XmfNew_{suffix}"
 
-        p["name"] = name
-        p["EQUIL_CON_ANG:"] = angle
+        p["OutputName"] = name
+        p["AlterContAng"] = angle
         nm.snflow(p)
 
         upscal_svg = (

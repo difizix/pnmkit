@@ -23,9 +23,11 @@ venv/
 # Cache directories
 .cache/
 *_cache/
+.deps/
 
 # Run outputs
-run/
+run*/
+pytest-*/
 
 # make dev artifacts
 **/*.so

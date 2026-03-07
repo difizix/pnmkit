@@ -51,6 +51,9 @@ def grepTableInFile(inFIle="vxlImage_upscal.dat",keyword="_SwPcKrwKroRI_cycle1",
     DbgMsg(f"{keyword} not found in {inFIle}")
     return np.zeros((1,5))
 
+
+# TODO move anything with sim to msmodels, to avoid circular dependancy
+
 def grepTableInRes(sim,prp,pTg=""):
     # TODO add Y and Z dir sims here
     lines=sim.getLines(prp)
@@ -65,10 +68,10 @@ def grepTableInRes(sim,prp,pTg=""):
     data="\t\n".join(lines[len1:len2].splitlines()[prp.nSkip:]) # +'\n make sure relperm data lines end with "\\t\\n" :\n'
     if (data):
         try: vals = np.genfromtxt(io.BytesIO(str.encode(data)))
-        except Exception as e: alert(f"no valid data for {prp} in {Path.cwd()}/{sim.resFile()}\n{e!s}",1)
+        except Exception as e: alert(f"no valid data for {prp} in {sim.resFile()}\n{e!s}",1)
         if len(vals) < 2 : DbgMsg(f"lenTbl: {len(vals)!s}  {sim.tag}")
         return vals
-    ensure(data,f"{ky} not found in {Path.cwd()}/{sim.resFile(prp)},  lin123: {len1} {len2} , #lines: {len(lines)}",1)
+    ensure(data,f"{ky} not found in {sim.resFile(prp)},  lin123: {len1} {len2} , #lines: {len(lines)}",1)
     return np.zeros((1,5))
 
 
@@ -117,7 +120,7 @@ def grepFloatsInRes(sims,prp,pTg=""):
     return Kabss
 
 
-def grepFlotInStrList(lines,keyword="Gavg", endKy="\n", skipLines=1, fnamHint=""):
+def grepFlotInStrList(lines, keyword="Gavg", endKy="\n", skipLines=1, fnamHint=""):
     valF=0.
     try: vals=re.search(f"{keyword}[:= \t]*(.*?){endKy}", lines, re.DOTALL).group(1).split() #? is for non greediness
     except Exception as e: print(e); DbgMsg(f"{Path.cwd()}/{fnamHint}:0:0,  no{keyword}...{endKy}  \n"); return 0.
@@ -126,10 +129,6 @@ def grepFlotInStrList(lines,keyword="Gavg", endKy="\n", skipLines=1, fnamHint=""
     except ValueError:  DbgMsg(f" ValueError @{skipLines}: {valF}, in file:{fnamHint}:0:0")
     except Exception as e:  print(e); DbgMsg(f"cannot grep {keyword}.*{endKy} in {fnamHint}")
     return valF
-
-def grepFlotInResList(sim,prp,pTg=""):  return grepFlotInStrList(sim.getLines(prp),prp.kywrd+pTg,prp.endKy,prp.skipLines,sim.resFile())
-
-def grepFlotInLogList(sim,prp,pTg=""):  return grepFlotInStrList(sim.getLogs(),prp.kywrd+pTg,prp.endKy,prp.nSkip,sim.logFile())
 
 
 def grepFixedListInFile(length=0, inFIle="vxlImage_upscal.dat", keyword="_SwPcKrwKroRI_cycle1", endKy="[$\n]"):
@@ -154,7 +153,7 @@ def grepFixedListInFile(length=0, inFIle="vxlImage_upscal.dat", keyword="_SwPcKr
 
 
 
-def grepSubKeysInStr(lines="",keyword="cycle 1", midkey="eP4:", endKy="^$"):
+def grepSubKeysInStr(lines="", keyword="cycle 1", midkey="eP4:", endKy="^$"):
     valsF = []
     matchcycl=re.search(f"{keyword}(.*?){endKy}", lines, re.DOTALL)
     if matchcycl :
@@ -243,7 +242,7 @@ def runXNFlow(kwrds: dict, netnam="", resSuffix="", app="scalor", forceRun=False
     lognam=f"{resDir}/{iNam}_{app}.log" # use same file for both log and input
     if forceRun or not Path(lognam).is_file():
         mkdr(resDir)
-        if "stage1" in kwrds:   kwrds.update({"networkDir":netDir, "TITLE":resSuffix})
+        if "stage1" in kwrds:   kwrds.update({"NetworkDir": netDir, "OutputName": resSuffix})
         else:
             netBas=f"{netDir}/{netnam}{kwrds.pop('pnTg', '').replace(' ', '')}"
             netf=netBas
@@ -253,8 +252,8 @@ def runXNFlow(kwrds: dict, netnam="", resSuffix="", app="scalor", forceRun=False
             if (netf[0] != "/") and (not Path(f"{resDir}/{netf}").exists()):
                 if app[0]=="c" and app[0]=="p" :     kwrds["NETWORK"] = f"F {netf}"
                 else: DbgMsg(f"ls {Path.cwd()}/{resDir}/{netf} # does not exist", 0) #exit(-1)
-            kwrds["networkFile"] = netf
-            kwrds["TITLE"] = iNam
+            kwrds["NetworkFile"] = netf
+            kwrds["OutputName"] = iNam
         kwrds["end"] = "of input"
         setPNMKeywordVals(kwrds, lognam, endchar=";", lines=f"//-*- C -*- {app} input follows: \n{{")
 
@@ -298,7 +297,7 @@ def runSKE(kwrds=None, bNam="", resSuffix="", app="skelor", forceRun=False, resD
             inf.write(f"read {imgnam} 1  \n")
             for ky, vl in  kwrds.items():
                 inf.write(f"{ky} \t{vl}\n")
-            inf.write(f"name: {bNam}{resSuffix} \n")
+            inf.write(f"OutputName: {bNam}{resSuffix} \n")
         with Path(lognam).open("wb") as logfile:
             disp(f"\n\nRunning {app} on {inam}, dir {resDir}, image: {imgnam}")
             subprocess.Popen(["echo","// -*- C -*- runSKE, ls:"], stdout=logfile, cwd=resDir)

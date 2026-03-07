@@ -113,22 +113,20 @@ wettability_indices: {
 
 TPak2DXmfNew_C60A90_command: (cd .; \
 scalor -i '
- oldAlg:    F;
- name:  TPak2DXmfNew_C60A90;
- EQUIL_CON_ANG: 3   60 90  0.25 -1.0     rand   0.;
- WaterOil:  0.05;
- Water: 0.001 1.2  1000.;
- Oil:   0.001 1000 1000.;
- CALC_BOX:  0.1 0.9;
- cycle1:    0.    1.0E+05    0.05   T T;
- cycle2:    1.   -5.0E+04    0.05   T T;
- cycle3:    0.    1.0E+05    0.05   T T;
- INIT_CONT_ANG: 1   0   1    0.25 -1.0     rand   0.;
- RAND_SEED: 1001;
- overwrite: T;
- writeXmf:  1 14 14 14;
- KEY:   VAL 0.5;
- networkFile:    TPak2DXmfNew_ms.xmf;
+ OutputName:   TPak2DXmfNew_C60A90;
+ WaterOil:     0.05;
+ Water:        0.001 1.2  1000.;
+ Oil:          0.001 1000 1000.;
+ UpscaleBox:   0.1 0.9;
+ Cycle1:       0.    1.0E+05    0.05   T T;
+ Cycle2:       1.   -5.0E+04    0.05   T T;
+ Cycle3:       0.    1.0E+05    0.05   T T;
+ InitContAng:  1   0   1    0.25 -1.0     rand   0.;
+ AlterContAng: 3   60 90    0.25 -1.0     rand   0.;
+ RandSeed:     1001;
+ Overwrite:    T;
+ WriteXmf:     1 14 14 14;
+ NetworkFile:  TPak2DXmfNew_ms.xmf;
 '
 )
 

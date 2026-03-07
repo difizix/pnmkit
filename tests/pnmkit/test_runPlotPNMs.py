@@ -55,7 +55,7 @@ def test_runPlotPNMs(tmp_path, monkeypatch, mtd):
     img_name = f"TPak2DExtruded_{img.nx}x{img.ny}x{img.nz}_5p0um"
     img.write(f"{img_name}.raw")
 
-    extract_params = {"name": img_name, "overwrite": "T", "void_range": "0 0"}
+    extract_params = {"OutputName": img_name, "Overwrite": "T", "VoidRange": "0 0"}
     if mtd != mXP:
         nm.mextract(img, extract_params)
 
@@ -66,16 +66,16 @@ def test_runPlotPNMs(tmp_path, monkeypatch, mtd):
     img_obj = VoxImg(img_name, netDir = str(tmp_path))
 
     inpt = {
-        'CALC_BOX': '0.2 0.9',
-        'INIT_CONT_ANG': '1 0 10 -0.2 -3. rand 0.',
-        'networkDir': str(tmp_path),
-        'cycle2': '1. -1.0E+05 0.05 T T',
-        'cycle3': '0. 1.0E+05 0.05 T T',
-        'cycle1_BC': 'T F F T DP 1. 1.',
-        'cycle2_BC': 'T F F T DP 1. 1.',
-        'cycle3_BC': 'T F F T DP 1. 1.',
-        'EQUIL_CON_ANG': '4 30 50 -0.2 -3. rand 0.',
-        'overwrite': 'T'
+        "UpscaleBox": "0.2 0.9",
+        "InitContAng": "1 0 10 -0.2 -3. rand 0.",
+        "NetworkDir": str(tmp_path),
+        "Cycle2": "1. -1.0E+05 0.05 T T",
+        "Cycle3": "0. 1.0E+05 0.05 T T",
+        "Cycle1_BC": "T F F T DP 1. 1.",
+        "Cycle2_BC": "T F F T DP 1. 1.",
+        "Cycle3_BC": "T F F T DP 1. 1.",
+        "AlterContAng": "4 30 50 -0.2 -3. rand 0.",
+        "Overwrite": "T"
     }
 
     clrSchem = getColorGradxy()
@@ -95,8 +95,8 @@ def test_runPlotPNMs(tmp_path, monkeypatch, mtd):
 
             # FIXME these depend on `mtd`
             p = inpt.copy()
-            p['EQUIL_CON_ANG'] = f'4 {CAp[0]} {CAp[1]} -0.2 -3. rand 0.'
-            p['cycle1'] = f'{Swi} 1.0E+05 0.05 T T'
+            p["AlterContAng"] = f"4 {CAp[0]} {CAp[1]} -0.2 -3. rand 0."
+            p["Cycle1"] = f"{Swi} 1.0E+05 0.05 T T"
 
             sim = FlowSim(tag, f"Swi={Swi}, CA={CAp[0]}-{CAp[1]}", img_obj, mtd, clrSchem[0][ii], p)
             sim.resSuffix = tag
@@ -112,18 +112,18 @@ def test_runPlotPNMs(tmp_path, monkeypatch, mtd):
     # 4. Plotting & Verification, just checking if the files are created
     pltTag = mtd.name
 
-    plotPropsCompact(simsPc, [plPc], icycls=[1, 2], outfile=f'Test_{pltTag}_PcCmpct.svg', addSummary=False)
-    assert Path(f'Test_{pltTag}_PcCmpct.svg').exists()
+    plotPropsCompact(simsPc, [plPc], icycls=[1, 2], outfile=f"Test_{pltTag}_PcCmpct.svg", addSummary=False)
+    assert Path(f"Test_{pltTag}_PcCmpct.svg").exists()
 
-    plotPropsCompact(simsPc, [plKr], icycls=[1, 2], outfile=f'Test_{pltTag}_KrCmpct.svg', addSummary=False)
-    assert Path(f'Test_{pltTag}_KrCmpct.svg').exists()
+    plotPropsCompact(simsPc, [plKr], icycls=[1, 2], outfile=f"Test_{pltTag}_KrCmpct.svg", addSummary=False)
+    assert Path(f"Test_{pltTag}_KrCmpct.svg").exists()
 
-    plotCycls(simsPc, [plPc, plKr, plRI], icycls=[1, 2], outfile=f'Test_{pltTag}_PcKrRI.svg')
-    assert Path(f'Test_{pltTag}_PcKrRI.svg').exists()
+    plotCycls(simsPc, [plPc, plKr, plRI], icycls=[1, 2], outfile=f"Test_{pltTag}_PcKrRI.svg")
+    assert Path(f"Test_{pltTag}_PcKrRI.svg").exists()
 
     # Test plotSiSr
-    plotSiSr(simsSw, ["CA=30-50"], [pSgr], outfile=f'Test_{pltTag}_SiSr.svg')
-    assert Path(f'Test_{pltTag}_SiSr.svg').exists()
+    plotSiSr(simsSw, ["CA=30-50"], [pSgr], outfile=f"Test_{pltTag}_SiSr.svg")
+    assert Path(f"Test_{pltTag}_SiSr.svg").exists()
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ def test_xpmtutorials_snm(tmp_path, monkeypatch, config_path):
     mhd_path = xpm_json_to_mhd(config_path, ske_dir)
     with chdir(ske_dir):
         img_name = mhd_path.stem
-        extract_params = {"name": img_name, "overwrite": "T", "void_range": "0 0"}
+        extract_params = {"OutputName": img_name, "Overwrite": "T", "VoidRange": "0 0"}
         name_mhd = Path(mhd_path).name
         nm.mextract(name_mhd, extract_params)
         assert Path(f"{img_name}_ms.xmf").exists(), "Network extraction failed"
@@ -86,22 +86,22 @@ def test_xpmtutorials_snm(tmp_path, monkeypatch, config_path):
         # FIXME these depend on `mtd`
         img = VoxImg(img_name)
 
-        CAp = [30, 50]
+        CA = [30, 50]
         Swi = 0.
-        tag = f"C{CAp[0]}A{CAp[1]}Swi{Swi}"
+        tag = f"C{CA[0]}A{CA[1]}Swi{Swi}"
         inpt = {
-            "CALC_BOX": "0.2 0.9",
-            "cycle1": f"{Swi} 1.0E+05 0.05 T T",
-            "cycle2": "1. -1.0E+05 0.05 T T",
-            "cycle3": "0. 1.0E+05 0.05 T T",
-            "cycle1_BC": "T F F T DP 1. 1.",
-            "cycle2_BC": "T F F T DP 1. 1.",
-            "cycle3_BC": "T F F T DP 1. 1.",
-            "INIT_CONT_ANG": "1 0 10 -0.2 -3. rand 0.",
-            "EQUIL_CON_ANG": f"4 {CAp[0]} {CAp[1]} -0.2 -3. rand 0.",
-            "overwrite": "T"
+            "UpscaleBox": "0.2 0.9",
+            "Cycle1":       f"{Swi} 1.0E+05 0.05 T T",
+            "Cycle2":        "1. -1.0E+05 0.05 T T",
+            "Cycle3":        "0. 1.0E+05 0.05 T T",
+            "Cycle1_BC":     "T F F T DP 1. 1.",
+            "Cycle2_BC":     "T F F T DP 1. 1.",
+            "Cycle3_BC":     "T F F T DP 1. 1.",
+            "InitContAng":   "1   0    10   -0.2 -3.  rand 0.",
+            "AlterContAng": f"4  {CA[0]} {CA[1]}  -0.2 -3.  rand 0.",
+            "Overwrite":     "T"
         }
-        sim = FlowSim(tag, f"Swi={Swi}, CA={CAp[0]}-{CAp[1]}", img, mSN, sSN, inpt.copy())
+        sim = FlowSim(tag, f"Swi={Swi}, CA={CA[0]}-{CA[1]}", img, mSN, sSN, inpt.copy())
         sim.resSuffix = tag
 
 

@@ -1,0 +1,19 @@
+# Portable clangd config
+CompileFlags:
+  Add:
+    - "-std=c++23"
+    - "-DBildMSM"
+    - "-DBildPNM"
+    - "-DMNFLOW"
+    - "-DOpenMP"
+    - "-DSVG"
+    - "-DZLIB"
+    - "-D_extraCompile_"
+
+Diagnostics:
+  Suppress:
+    - unused-parameter
+
+# Indexing settings
+Index:
+  Background: Build
