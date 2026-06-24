@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pnmkit"
-version = "0.0.1"
+version = "0.0.2"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 description="python kit for pore network extraction and flow simulation"

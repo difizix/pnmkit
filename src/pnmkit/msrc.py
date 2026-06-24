@@ -36,6 +36,8 @@ def _add_to_path(env, path_to_add):
 
 _add_to_path(msEnv, _msInst / "bin")
 _add_to_path(os.environ, _msInst / "bin")
+_add_to_path(msEnv, Path(__file__).absolute().parent.parent / "bin")
+_add_to_path(os.environ, Path(__file__).absolute().parent.parent / "bin")
 
 ######################  BASIC TEST UTILITIES  ##########################
 

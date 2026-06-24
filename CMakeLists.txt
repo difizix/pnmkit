@@ -76,7 +76,7 @@ if(NOT OpenMP_FOUND)
   find_package(OpenMP REQUIRED)
 endif()
 
-# image3kit (local submodule)
+# image3kit (local submodule), leads to same version as pnmkit -> fails tests
 set(image3kit_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/image3kit)
 add_subdirectory(image3kit)
 
