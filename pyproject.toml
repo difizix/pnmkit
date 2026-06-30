@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pnmkit"
+version = "0.1.0"
+description = "Python utilities for pore-scale modelling"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "vtk",
+    "numpy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "pytest>=7",
+    "image3kit>=0.2.0",
+]
+foam = [
+    "image3kit>=0.2.0",
+]
+
+[tool.setuptools]
+package-dir = {"pnmkit" = "."}
+packages = ["pnmkit", "pnmkit.foam_variants"]
+
+[tool.ruff]
+line-length = 160
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["F", "I", "UP", "B", "ARG"]
+ignore = [
+    "B006",  # legacy call sites still rely on mutable default args in a few places
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
