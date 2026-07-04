@@ -63,4 +63,4 @@ def snflow(inp: dict) -> Xdml:
     """
     Run network model stages
     """
-__version__: str = '0.0.1'
+__version__: str = '0.0.2'

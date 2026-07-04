@@ -27,6 +27,9 @@ classifiers = [
   "Private :: Do Not Upload",
 ]
 
+[project.optional-dependencies]
+test = ["pytest", "matplotlib", "scipy", "pandas", "sqlalchemy"]
+
 [dependency-groups]
 test = ["pytest", "matplotlib", "scipy", "pandas", "sqlalchemy"]
 dev = [{ include-group = "test" }]
