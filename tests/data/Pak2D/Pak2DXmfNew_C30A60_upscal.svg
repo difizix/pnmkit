@@ -12,14 +12,14 @@ xmlns ="http://www.w3.org/2000/svg"
 
 
 
-porousRock:     TPak2DXmfNew_C30A60
+porousRock:     Pak2DXmfNew_C30A60
 
-TPak2DXmfNew_C30A60_porosity:           0.131789    ;
-TPak2DXmfNew_C30A60_permeability:       5.1228e-14  ;
-TPak2DXmfNew_C30A60_formationfactor:    12.1159 ;
-TPak2DXmfNew_C30A60_iftOW:              0.05    ;
+Pak2DXmfNew_C30A60_porosity:           0.131789    ;
+Pak2DXmfNew_C30A60_permeability:       5.1228e-14  ;
+Pak2DXmfNew_C30A60_formationfactor:    12.1159 ;
+Pak2DXmfNew_C30A60_iftOW:              0.05    ;
 
-TPak2DXmfNew_C30A60_SwPcKrwKroRI_cycle1:    // drainage      cycle_1
+Pak2DXmfNew_C30A60_SwPcKrwKroRI_cycle1:    // drainage      cycle_1
 //Sw             Pc(Pa)          Krw             Kro                  RI
 1.000000      1.000000e-08    1.000000e+00    0.000000e+00    1.000000e+00
 0.998581      1.100000e+03    9.656914e-01    0.000000e+00    1.006531e+00
@@ -48,7 +48,7 @@ TPak2DXmfNew_C30A60_SwPcKrwKroRI_cycle1:    // drainage      cycle_1
 
 
 
-TPak2DXmfNew_C30A60_SwPcKrwKroRI_cycle2:    // imbibition    cycle_2
+Pak2DXmfNew_C30A60_SwPcKrwKroRI_cycle2:    // imbibition    cycle_2
 //Sw             Pc(Pa)          Krw             Kro                  RI
 0.115089      1.000000e+05    4.428207e-06    4.996962e-01    9.747404e+02
 0.115800      9.690000e+04    9.576526e-06    4.981092e-01    9.322132e+02
@@ -73,7 +73,7 @@ TPak2DXmfNew_C30A60_SwPcKrwKroRI_cycle2:    // imbibition    cycle_2
 
 
 
-TPak2DXmfNew_C30A60_SwPcKrwKroRI_cycle3:    // drainage      cycle_3
+Pak2DXmfNew_C30A60_SwPcKrwKroRI_cycle3:    // drainage      cycle_3
 //Sw             Pc(Pa)          Krw             Kro                  RI
 0.625168     -5.000000e+04    6.468010e-02    0.000000e+00    3.879366e+00
 0.625168     -4.790000e+04    6.468010e-02    0.000000e+00    3.879366e+00
@@ -99,9 +99,9 @@ wettability_indices: {
          AmottI=     5.780303e+07   ;    AmottIw=    5.780303e+07   ;    AmottIo=    1.298871e+00   ;    USBM=   8.759668e+00   ; };
 
 
-TPak2DXmfNew_C30A60_command: (cd .; \
+Pak2DXmfNew_C30A60_command: (cd .; \
 scalor -i '
- OutputName:   TPak2DXmfNew_C30A60;
+ OutputName:   Pak2DXmfNew_C30A60;
  WaterOil:     0.05;
  Water:        0.001 1.2  1000.;
  Oil:          0.001 1000 1000.;
@@ -114,7 +114,7 @@ scalor -i '
  RandSeed:     1001;
  Overwrite:    T;
  WriteXmf:     1 14 14 14;
- NetworkFile:  TPak2DXmfNew_ms.xmf;
+ NetworkFile:  Pak2DXmfNew_ms.xmf;
 '
 )
 

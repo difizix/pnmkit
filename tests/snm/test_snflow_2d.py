@@ -9,7 +9,7 @@ import image3kit as ik
 import pnmkit as nm
 
 
-@pytest.mark.parametrize("img_name_ext", ["piskel.png", "TPak2D_240x200x1_5um.txt"])
+@pytest.mark.parametrize("img_name_ext", ["piskel.png", "Pak2D_240x200x1_5um.txt"])
 def test_snflow_2d(tmp_path, monkeypatch, img_name_ext):
     # Setup paths
     test_dir = Path(__file__).resolve().parent
@@ -37,7 +37,7 @@ def test_snflow_2d(tmp_path, monkeypatch, img_name_ext):
 
     # 1. Image processing with image3kit
     img = ik.VxlImgU8(img_path)
-    img.plotSlice(
+    img.plot_slice(
         filename=f"{img_name}_2d.png",
         normal_axis="z",
         min_val=0,
@@ -45,10 +45,10 @@ def test_snflow_2d(tmp_path, monkeypatch, img_name_ext):
         color_map="RGB",
     )
     for _ in range(2):
-        img.growLabel(0)
-    img.voxelSize = (1e-6, 1e-6, 1e-6)
-    img.distMapExtrude(offset=0.5, scale=2.0)
-    img.plotSlice(
+        img.grow_label(0)
+    img.spacing = (1e-6, 1e-6, 1e-6)
+    img.extrude_dist_map(offset=0.5, scale=2.0)
+    img.plot_slice(
         filename=f"{img_name}3D_mid.png",
         normal_axis="z",
         min_val=0,
@@ -106,6 +106,6 @@ def test_snflow_2d(tmp_path, monkeypatch, img_name_ext):
 
 
 if __name__ == "__main__":
-    for img_ext in ["piskel.png", "TPak2D_240x200x1_5um.txt"]:
+    for img_ext in ["piskel.png", "Pak2D_240x200x1_5um.txt"]:
         print(f"\n--- Running for {img_ext} ---")
         test_snflow_2d(None, None, img_ext)

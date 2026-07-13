@@ -28,7 +28,7 @@ def test_runPlotPNMs(tmp_path, monkeypatch, mtd):
     # Setup paths
     test_dir = Path(__file__).resolve().parent.parent
     data_dir = test_dir / "data"
-    img_name_ext = "TPak2D_240x200x1_5um.txt"
+    img_name_ext = "Pak2D_240x200x1_5um.txt"
 
     # Locate image
     img_path = data_dir / img_name_ext
@@ -49,10 +49,10 @@ def test_runPlotPNMs(tmp_path, monkeypatch, mtd):
     # We follow the pattern in test_snflow_2d.py
     img = ik.VxlImgU8(img_path)
     for _ in range(2):
-        img.growLabel(0)
-    img.voxelSize = (1e-6, 1e-6, 1e-6)
-    img.distMapExtrude(offset=0.5, scale=2.0)
-    img_name = f"TPak2DExtruded_{img.nx}x{img.ny}x{img.nz}_5p0um"
+        img.grow_label(0)
+    img.spacing = (1e-6, 1e-6, 1e-6)
+    img.extrude_dist_map(offset=0.5, scale=2.0)
+    img_name = f"Pak2DExtruded_{img.nx}x{img.ny}x{img.nz}_5p0um"
     img.write(f"{img_name}.raw")
 
     extract_params = {"OutputName": img_name, "Overwrite": "T", "VoidRange": "0 0"}

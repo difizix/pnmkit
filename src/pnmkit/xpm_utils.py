@@ -186,7 +186,7 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
         }
     }
 
-    stem = Path(imgName).stem  # e.g. "TPak2DExtruded_240x200x28_5p0um"
+    stem = Path(imgName).stem  # e.g. "Pak2DExtruded_240x200x28_5p0um"
 
     # Guess image size from filename: _<NX>x<NY>x<NZ>
     m_size = re.search(r"_(\d+)x(\d+)x(\d+)", stem)
