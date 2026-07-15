@@ -11,6 +11,7 @@ import pytest
 
 import pnmkit as nm
 from pnmkit.msmodels import FlowSim, VoxImg, mSN, sSN
+from pnmkit.msrc import msEnv
 from pnmkit.xpm_utils import xpm_json_to_mhd
 
 # config_paths = sorted(Path("xpm/files/tutorials").glob("tutorial*/config*.json"), reverse=True)
@@ -49,10 +50,7 @@ def test_xpmtutorials_xpm(tmp_path, monkeypatch, config_path):
     xpm_json_to_mhd(config_path, run_images)
 
     print(f"  Processing {rel_config} in {run_xpmtut}...")
-    env = os.environ.copy()
-    # the executables are generated using `make dev`, `make all` puts them in the .venv/bin directory:
-    env["PATH"] = str(Path("build/install/bin").absolute()) + ":" + env.get("PATH", "")
-    env["LD_LIBRARY_PATH"] = str(Path("build/install/lib").absolute()) + ":" + env.get("LD_LIBRARY_PATH", "")
+    env = msEnv.copy()
     env["HWLOC_COMPONENTS"] = "-gl"
 
     subprocess.run(["xpm", "-G", str(rel_config)], cwd=run_xpmtut, env=env, check=True)

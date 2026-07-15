@@ -11,12 +11,20 @@ from pathlib import Path
 
 ######################  SET SCRIPT DIRECTORIES    ######################
 
-_msRoot = Path(__file__).absolute().parent.parent.parent  # git root directory
+def _find_msinst_dir(path):
+    """Find the directory holding the compiled xpm/snm binaries (msInst/bin, msInst/lib).
 
-_msInst = _msRoot / "inst" if (_msRoot / "inst/bin").exists() else _msRoot.parent.parent
+    should support make env as well as global pip install
+    """
+    src_pnmkit = Path(path).resolve().parent
+    if src_pnmkit.name == "pnmkit" and src_pnmkit.parent.name == "src":
+        return src_pnmkit.parent.parent / ".venv"
+    return Path(sys.prefix)
 
-_msInstNote="Note: msInst shall be inst/ or .venv/, for `make dev` and `make all` respectively"
-assert (_msInst / "bin").exists(), f"Error: {_msInst}/bin not found, root: {_msRoot},\n{_msInstNote}"
+_msInst = _find_msinst_dir(__file__)
+
+_msInstNote = "Note: msInst shall be a checkout's .venv (source/editable install) or sys.prefix (installed package)"
+assert (_msInst / "bin").exists(), f"Error: {_msInst}/bin not found,\n{_msInstNote}"
 
 msInst = str(_msInst)
 
@@ -24,18 +32,20 @@ msEnv = os.environ.copy()
 
 defaultnm="snm" # not really used atm: tag to allow xpm defaults be added / chosen without conflict with snm ones
 
-def _add_to_path(env, path_to_add):
+def _add_to_path(env, path_to_add, var="PATH"):
     sep = os.pathsep
     if not path_to_add:
         return
     path_str = str(path_to_add)
-    current_path = env.get("PATH", "")
+    current_path = env.get(var, "")
     if path_str not in current_path.split(sep):
-        env["PATH"] = path_str + sep + current_path
+        env[var] = path_str + sep + current_path
 
 
 _add_to_path(msEnv, _msInst / "bin")
 _add_to_path(os.environ, _msInst / "bin")
+_add_to_path(msEnv, _msInst / "lib", var="LD_LIBRARY_PATH")
+_add_to_path(os.environ, _msInst / "lib", var="LD_LIBRARY_PATH")
 _add_to_path(msEnv, Path(__file__).absolute().parent.parent / "bin")
 _add_to_path(os.environ, Path(__file__).absolute().parent.parent / "bin")
 

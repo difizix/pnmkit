@@ -9,7 +9,7 @@ ifneq (,$(wildcard ${MkDIR}../.env))
 endif
 # Alow global (out of source) build directory,
 # if set via msBilDir, msDepDir and msPyDir:
-msBilDir ?= ${MkDIR}
+msBilDir ?= ${MkDIR}/build
 msDepDir ?= ${MkDIR}.deps
 msPyDir ?= ${MkDIR}.venv
 
@@ -54,7 +54,7 @@ all: setup_venv
 VERSION := $(shell grep "^version =" pyproject.toml | cut -d '"' -f 2)
 
 dev: setup_venv
-	${BinDir}/cmake -S . -B $(msBilDir)/pnmkit -DCMAKE_INSTALL_PREFIX=inst -DSKBUILD_PROJECT_VERSION=$(VERSION) -DFETCHCONTENT_BASE_DIR=$(msDepDir)
+	${BinDir}/cmake -G Ninja -S . -B $(msBilDir)/pnmkit -DCMAKE_INSTALL_PREFIX=.venv -DSKBUILD_PROJECT_VERSION=$(VERSION) -DFETCHCONTENT_BASE_DIR=$(msDepDir)
 	${BinDir}/cmake --build $(msBilDir)/pnmkit --verbose -j
 	CMAKE_INSTALL_MODE=SYMLINK_OR_COPY ${BinDir}/cmake --install $(msBilDir)/pnmkit
 	$(MAKE) dev_test
@@ -66,10 +66,10 @@ ifneq ($(test_dir),)
 endif
 
 dev_test:
-	PYTHONPATH=inst:image3kit/src ${PyExe} -m pytest -m "not integration" $(pytest_args)
+	PYTHONPATH=.venv:image3kit/src ${PyExe} -m pytest -m "not integration" $(pytest_args)
 
 dev_test_integrations:
-	PYTHONPATH=inst:image3kit/src ${PyExe} -m pytest -m integration tests/pnmkit -v -s $(pytest_args)
+	PYTHONPATH=.venv:image3kit/src ${PyExe} -m pytest -m integration tests/pnmkit -v -s $(pytest_args)
 
 stubgen:
 	@[ -f ${BinDir}/pybind11-stubgen ] || (set -x && ${PyPip} install pybind11-stubgen)
@@ -95,15 +95,15 @@ test_integrations:
 
 setup_venv:
 	@[ -d ${msPyDir} ] || python3 -m venv ${msPyDir}
-	${PyPip} install cmake pre-commit scikit-build-core pybind11 pytest
-	@if [ ! -f $(msBilDir)/pnmkit/Makefile ]; then \
-		${BinDir}/cmake -S . -B $(msBilDir)/pnmkit -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSKBUILD_PROJECT_VERSION=$(VERSION) -DFETCHCONTENT_BASE_DIR=$(msDepDir); \
+	${PyPip} install cmake ninja pre-commit scikit-build-core pybind11 pytest
+	@if [ ! -f $(msBilDir)/pnmkit/build.ninja ]; then \
+		${BinDir}/cmake -G Ninja -S . -B $(msBilDir)/pnmkit -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSKBUILD_PROJECT_VERSION=$(VERSION) -DFETCHCONTENT_BASE_DIR=$(msDepDir); \
 	fi
 	ln -sf $(msBilDir)/pnmkit/compile_commands.json ./
 	@echo ========= env setup done =========
 
 clean:
-	rm -rf $(msBilDir)/pnmkit build compile_commands.json src/pnmkit/*.so
+	rm -rf $(msBilDir)/pnmkit compile_commands.json src/pnmkit/*.so
 
 pre-commit:
 	${BinDir}/pre-commit run -a || ${BinDir}/pre-commit run -a \
