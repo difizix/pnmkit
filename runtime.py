@@ -126,6 +126,30 @@ for _extra_name in ("bin", "Scripts"):
     _add_to_path(msEnv, _extra_bin)
     _add_to_path(os.environ, _extra_bin)
 
+
+######################  SCRIPT & TEMPLATE FINDERS  #####################
+
+
+def find_script(rel_path: str = "porefoam2f/script") -> Path:
+    """Find a script, template, or resource directory/file.
+
+    Searches:
+    1. {msSrc}/{rel_path} (if msSrc in os.environ)
+    2. {MS_INST}/share/{rel_path}
+    """
+
+    candidates = [
+        Path(__file__).resolve().parents[1] / "src" / rel_path,
+        Path(_msInst) / "bin" / rel_path,
+        Path(_msInst) / "share" / rel_path,
+    ]
+
+    for p in candidates:
+        if p.exists():
+            return p
+    return candidates[0]
+
+
 ######################  BASIC TEST UTILITIES  ##########################
 
 disp = functools.partial(print, flush=True)

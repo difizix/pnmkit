@@ -33,7 +33,11 @@ foam = [
 
 [tool.setuptools]
 package-dir = {"pnmkit" = "."}
-packages = ["pnmkit"]
+
+packages = ["pnmkit", "pnmkit.foam", "pnmkit.porefoam", "pnmkit.porefoam.tests"]
+
+[tool.setuptools.package-data]
+"pnmkit.porefoam.tests" = ["ref/*"]
 
 [tool.ruff]
 line-length = 160
@@ -71,7 +75,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["T20", "ARG001", "ARG002"]
+"porefoam/tests/**" = ["N999", "T20"]
 "extra/**" = ["T20"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "porefoam/tests"]
+markers = [
+    "regression: slow simulation regression tests (skipped by default)",
+]
+addopts = "-m 'not regression'"
