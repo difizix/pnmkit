@@ -4,9 +4,12 @@ from pathlib import Path
 from typing import Any
 
 
-def skelor(img=None, config=None, verbose: bool = False):  # noqa: ARG001
+def skelor(img=None, config=None, verbose: bool = False):
     """Extract pore network from a voxel image using skelor/snextract."""
     from .process import run_ske
+
+    if verbose:
+        print("Running Skelor network extraction")
 
     config = {} if config is None else config.copy()
     output_name = config.get("OutputName", config.get("name", "network"))
@@ -21,14 +24,26 @@ def skelor(img=None, config=None, verbose: bool = False):  # noqa: ARG001
     return ret
 
 
-def pnextract(img=None, config=None, verbose: bool = False):  # noqa: ARG001
-    """Extract classical pore network from a voxel image using pnextract."""
+def pnextract(img=None, config=None, verbose: bool = False):
+    """
+    Extract classical pore network from a voxel image using pnextract,
+    or seed an existing network if NetworkSeed / SeedDir is specified.
+    """
+    from .network_ops import seed_net_to_xpm
     from .process import run_ske
 
     config = {} if config is None else config.copy()
     output_name = config.get("OutputName", config.get("name", "network"))
     overwrite_str = str(config.get("Overwrite", "T")).upper()
     force_run = overwrite_str in ("T", "TRUE", "1")
+
+    seed_src = config.get("NetworkSeed", config.get("SeedDir", config.get("seed_dir", None)))
+    if seed_src:
+        if verbose:
+            print(f"Seeding network from {seed_src}")
+        target_dir = Path(config.get("netDir", "."))
+        seed_net_to_xpm(seed_src, target_dir=target_dir, target_prefix=output_name)
+        return 0
 
     if img is not None and hasattr(img, "write"):
         img.write(f"{output_name}.raw")
@@ -38,9 +53,12 @@ def pnextract(img=None, config=None, verbose: bool = False):  # noqa: ARG001
     return ret
 
 
-def scalor(config: dict[str, Any], verbose: bool = False):  # noqa: ARG001
+def scalor(config: dict[str, Any], verbose: bool = False):
     """Run snflow/scalor network flow simulation on a network file (.xmf)."""
     from .process import run_xnflow
+
+    if verbose:
+        print("Running Scalor")
 
     config = config.copy()
     network_file = config.get("NetworkFile", "")
@@ -64,10 +82,11 @@ def scalor(config: dict[str, Any], verbose: bool = False):  # noqa: ARG001
     return ret
 
 
-def cnflow(config: dict[str, Any], verbose: bool = False):  # noqa: ARG001
+def cnflow(config: dict[str, Any], verbose: bool = False):
     """Run cnflow classical pore network simulation."""
     from .process import run_xnflow
-
+    if verbose:
+        print("Running Cnflow")
     config = config.copy()
     network_file = config.get("NetworkFile", "")
     network_base = config.get("NETWORK", "")
@@ -100,7 +119,7 @@ def cnflow(config: dict[str, Any], verbose: bool = False):  # noqa: ARG001
     return ret
 
 
-def pnflow(config: dict[str, Any], verbose: bool = False, exe: str = "pnflow"):  # noqa: ARG001
+def pnflow(config: dict[str, Any], verbose: bool = False, exe: str = "pnflow"):
     """Run pnflow classical pore network simulation."""
     from .process import run_xnflow
 
@@ -135,8 +154,8 @@ def pnflow(config: dict[str, Any], verbose: bool = False, exe: str = "pnflow"): 
     return ret
 
 
-def xpm(config: dict[str, Any], verbose: bool = False):  # noqa: ARG001
-    """Run XPM pore scale simulation directly on a voxel image."""
+def xpm(config: dict[str, Any], verbose: bool = False):
+    """Run XPM pore scale simulation directly on a voxel image or pre-seeded network."""
     from .xpm import run_xpm
 
     config = config.copy()
@@ -145,7 +164,7 @@ def xpm(config: dict[str, Any], verbose: bool = False):  # noqa: ARG001
     force_run = overwrite_str in ("T", "TRUE", "1")
 
     img_stem = output_name
-    for key in ("ImageFile", "image", "NetworkFile", "NETWORK"):
+    for key in ("ImageFile", "image", "NetworkSeed", "SeedDir", "seed_dir", "NetworkFile", "NETWORK"):
         val = str(config.get(key, ""))
         if val:
             img_stem = Path(val.replace("F ", "").strip()).stem

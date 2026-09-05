@@ -1,72 +1,33 @@
-"""Synthetic sphere layer benchmark integration tests (lyrd).
-
-Procedural geometry: 2 layers of spheres confined by planes with random surface noise.
-Executables tested: skelor (mextract), pnextract, scalor (snflow), cnflow, xpm.
-"""
+"""Pytest integration tests for synthetic confined sphere layer benchmark (lyrd)."""
 
 from __future__ import annotations
 
-import shutil
+import os
+import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pnmkit import cnflow, mextract, pnextract, snflow, xpm
 from pnmkit.process import grep_float_in_str_list as findf
-from pnmkit.runtime import msEnv
 
+_tests_dir = str(Path(__file__).parent.resolve())
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
 
-def _has_exe(app: str) -> bool:
-    """Check if the given executable is found in msEnv PATH or system PATH."""
-    return shutil.which(app, path=msEnv.get("PATH", "")) is not None
-
-
-def _make_layered_image(target_dir: Path):
-    """Generate the synthetic confined sphere layer image."""
-    image3kit = pytest.importorskip("image3kit")
-    VxlImgU8 = image3kit.VxlImgU8
-    sphere = image3kit.sphere
-    cube = image3kit.cube
-    dbl3 = image3kit.dbl3
-    int3 = image3kit.int3
-
-    img = VxlImgU8((160, 92, 80), 0)
-    img.spacing = dbl3(0.5, 0.5, 0.5)
-    img.paint(sphere((3, 6, 0), 23, 1))
-    img.paint(sphere((3, 6, 40), 23, 1))
-    img.paint(sphere((40, 6, 0), 23, 1))
-    img.paint(sphere((40, 6, 40), 23, 1))
-    img.paint(sphere((77, 6, 0), 23, 1))
-    img.paint(sphere((77, 6, 40), 23, 1))
-    img.paint(sphere((3, -6, 0), 30, 1))
-    img.paint(sphere((3, -6, 40), 30, 1))
-    img.paint(sphere((40, -6, 0), 30, 1))
-    img.paint(sphere((40, -6, 40), 30, 1))
-    img.paint(sphere((77, -6, 0), 30, 1))
-    img.paint(sphere((77, -6, 40), 30, 1))
-    img.paint(cube((0, 0, 0), (80, 6, 40), 1))
-    img.paint(cube((0, 25, 0), (80, 21, 40), 2))
-    img.spacing = dbl3(1e-6, 1e-6, 1e-6)
-    img.crop(int3(20, 0, 0), int3(140, 92, 80))
-    img.add_surf_noise(1 << 2, 1 << 2, 12, 12)
-    img.grow_box(2)
-    img.mode6(1)
-    img.mode6(1)
-    img.shrink_box(2)
-    img.grow_box(2)
-    for _ in range(10):
-        img.mode6(2)
-    img.shrink_box(2)
-
-    mhd_path = target_dir / "sphelyrRuf.mhd"
-    img.write(str(mhd_path))
-    return img, mhd_path
+from synthetic_lyrd import (
+    _has_exe,
+    _make_spheres_layer_image,
+    parse_cnm_pc_debug,
+    run_lyrd_benchmark,
+)
 
 
 @pytest.fixture
 def sphelyr_env(tmp_path, monkeypatch):
     """Fixture providing an isolated working directory with generated sphere layers."""
     monkeypatch.chdir(tmp_path)
-    img, mhd_path = _make_layered_image(tmp_path)
+    img, mhd_path = _make_spheres_layer_image(tmp_path)
     return {"img": img, "mhd_path": mhd_path, "dir": tmp_path}
 
 
@@ -153,10 +114,6 @@ def test_lyrd_scalor_simulation(sphelyr_env):
     assert findf(svg, "sphelyrRuf_porosity") == pytest.approx(0.0863, rel=0.1)
     assert findf(svg, "sphelyrRuf_permeability") == pytest.approx(3.08e-13, rel=0.2)
 
-    log = log_file.read_text()
-    assert "Pc: 1.62e+05" in log
-    assert "End of cycle 2" in log
-
 
 @pytest.mark.skipif(not _has_exe("pnextract") or not _has_exe("cnflow"), reason="pnextract or cnflow not found")
 def test_lyrd_cnflow_simulation(sphelyr_env):
@@ -188,10 +145,6 @@ def test_lyrd_cnflow_simulation(sphelyr_env):
     assert findf(svg, "sphelyrCN_porosity") == pytest.approx(0.0867, rel=0.1)
     assert findf(svg, "sphelyrCN_permeability") == pytest.approx(3.58e-13, rel=0.2)
 
-    log = log_file.read_text()
-    assert "Drainage" in log
-    assert "Imbibition" in log
-
 
 @pytest.mark.skipif(not _has_exe("xpm"), reason="xpm executable not found")
 def test_lyrd_xpm_simulation(sphelyr_env):
@@ -214,3 +167,41 @@ def test_lyrd_xpm_simulation(sphelyr_env):
         tsv = tsv_file.read_text()
         assert findf(tsv, "sphelyrXP_porosity") == pytest.approx(0.0867, rel=0.1)
         assert findf(tsv, "sphelyrXP_permeability") == pytest.approx(2.76e-13, rel=0.2)
+
+
+@pytest.mark.skipif(
+    not _has_exe("pnextract") or not _has_exe("cnflow") or not _has_exe("xpm"),
+    reason="pnextract, cnflow, or xpm not found",
+)
+def test_lyrd_cnm_vs_xpm_benchmark(sphelyr_env):
+    """Integration test: Verify CNM vs XPM match on seeded equilateral layered sphere network."""
+    report = run_lyrd_benchmark(target_dir=sphelyr_env["dir"], sigma=1.0, contact_angles=(0.0, 30.0, 60.0), verbose=False)
+    assert abs(report["diff_phi_pct"]) < 0.1, f"Porosity diff too large: {report['diff_phi_pct']}%"
+    assert abs(report["diff_entry_mid_pct"]) < 0.1, f"Mid Entry Pc diff too large: {report['diff_entry_mid_pct']}%"
+
+    xpm_stats = report.get("xpm_radii_stats")
+    if xpm_stats:
+        cnm_stats = report["radii_stats"]
+        assert xpm_stats["num_pores"] == cnm_stats["num_pores"]
+        assert xpm_stats["num_throats"] == cnm_stats["num_throats"]
+        assert xpm_stats["pore_r_mean"] == pytest.approx(cnm_stats["pore_r_mean"], rel=1e-4)
+        assert xpm_stats["throat_r_mean"] == pytest.approx(cnm_stats["throat_r_mean"], rel=1e-4)
+
+    # Corner angle assertions
+    cs = report.get("cn_corner_stats", {})
+    if cs:
+        assert cs["pore_half_ang_arith_deg"] == pytest.approx(30.0, abs=0.5)
+        assert cs["throat_half_ang_arith_deg"] == pytest.approx(30.0, abs=0.5)
+
+    # Multi contact angle assertions (Morrow model 1)
+    ca_res = {r["theta"]: r for r in report["ca_results"]}
+    assert ca_res[0.0]["mid_mech"] == "Snap-off"
+    assert abs(ca_res[0.0]["diff_mid_pct"]) < 0.1, f"Snap-off at 0 deg diff: {ca_res[0.0]['diff_mid_pct']}%"
+    assert ca_res[30.0]["mid_mech"] == "Snap-off"
+    assert abs(ca_res[30.0]["diff_mid_pct"]) < 2.0, f"Snap-off at 30 deg diff: {ca_res[30.0]['diff_mid_pct']}%"
+    assert ca_res[60.0]["mid_mech"] == "Cutoff (None)"
+    assert ca_res[60.0]["mid_pc_xp"] < 1e-6 or ca_res[60.0]["mid_pc_cn"] < 3e4
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "-s"])

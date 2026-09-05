@@ -5,16 +5,16 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 import tarfile
 from pathlib import Path
-from shutil import which
 from typing import Any
 
-from .process import mkdr
+from .process import mkdr, which
 from .runtime import disp, msEnv, msInst
 
 defaultnm = "snm"  # move to runtime.py and use in process.py to convert tsv to json if needed
@@ -31,7 +31,6 @@ def interpolate(x: float, x_points: list[float], y_points: list[float]) -> float
 
     for i in range(len(x_points) - 1):
         if x_points[i] <= x <= x_points[i + 1]:
-            # Linear interpolation formula: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
             dx = x_points[i + 1] - x_points[i]
             if dx == 0:
                 return y_points[i]
@@ -51,9 +50,10 @@ def read_res_file(file_path: str | Path) -> list[list[float]] | None:
                     continue
     return data
 
-def _get_ift_val(resDir, name):
 
+def _get_ift_val(resDir: str | Path, name: str) -> float:
     ift_val = 1.0
+    resDir = Path(resDir)
     config_candidates = [
         resDir / f"input_{name}_xpm.json",
         resDir / "config.json",
@@ -85,22 +85,20 @@ def _get_ift_val(resDir, name):
                 pass
     return ift_val
 
+
 def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv") -> str:
-    """
-    Consolidate XPM JSON/TXT results into SNM TSV format.
-
-    Args:
-        resDir: Directory containing XPM results (pc_*.txt, kr_*.txt, etc.)
-        name: Base name for the porous rock. Defaults to directory name.
-        ext: Extension or suffix for the output file (e.g., '.tsv' or '_upscal.tsv').
-
-    Returns:
-        Path to the generated TSV file.
-    """
+    """Consolidate XPM JSON/TXT results into SNM TSV format."""
     resDir = Path(resDir)
     resOutDir = resDir
 
     disp(f"Consolidating XPM results in {resDir.name}, name: {name}")
+
+    # Check for network_stats.json if present
+    stats_file = resDir / "network_stats.json"
+    if not stats_file.is_file():
+        cand_files = list(resDir.glob("**/network_stats.json"))
+        if cand_files:
+            stats_file = cand_files[0]
 
     # XPM puts results in results/<image_stem>/
     search_files = list(resDir.glob("**/phi_k_kr_pc.json"))
@@ -111,45 +109,50 @@ def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv")
     resDir = target_file.parent
     disp(f"  Found XPM result files in: {resDir.name}")
 
-    # Metadata defaults
     poro = None
     perm = None
 
-    # Try to read metadata from JSON
     for meta_name in ["phi_k_kr_pc.json", "petrophysics_summary.json"]:
         meta_json = resDir / meta_name
-        assert meta_json.exists(), f"missing {Path.cwd()}/{meta_json}"
+        if meta_json.exists():
+            try:
+                with meta_json.open("r", encoding="utf-8") as f:
+                    m = json.load(f)
+                    if "poro" in m:
+                        poro = m["poro"]
+                    elif "total_poro" in m:
+                        poro = m["total_poro"]
+
+                    if "perm" in m:
+                        perm = m["perm"]
+                    elif "total_perm" in m:
+                        tp = m["total_perm"]
+                        perm = tp[0] if isinstance(tp, list) else tp
+            except (json.JSONDecodeError, KeyError, IndexError):
+                continue
+
+    if poro is None and stats_file.is_file():
         try:
-            with meta_json.open("r", encoding="utf-8") as f:
-                m = json.load(f)
-                if "poro" in m:
-                    poro = m["poro"]
-                elif "total_poro" in m:
-                    poro = m["total_poro"]
+            with open(stats_file) as f:
+                sdata = json.load(f)
+                poro = float(sdata.get("porosity", sdata.get("poro", 0.0)))
+                perm = float(sdata.get("permeability", sdata.get("perm", 0.0))) * 1e15
+        except Exception:
+            pass
 
-                if "perm" in m:
-                    perm = m["perm"]
-                elif "total_perm" in m:
-                    tp = m["total_perm"]
-                    perm = tp[0] if isinstance(tp, list) else tp
+    assert poro is not None, f"Could not determine porosity in {resDir}"
+    assert perm is not None, f"Could not determine permeability in {resDir}"
 
-        except (json.JSONDecodeError, KeyError, IndexError):
-            continue
-
-    assert poro is not None
-    assert perm is not None
     output = []
     output.append(f"RockType:  {name}\n")
     output.append(f"{name}_porosity:           {poro} ;")
-    # Convert permeability from mD to m^2 (* 1e-15)
     perm_m2 = perm * 1e-15
     output.append(f"{name}_permeability:       {perm_m2} ;")
     output.append(f"{name}_formationfactor:    {1.0 / poro if poro > 0 else 1.0} ;")
 
-    ift_val = _get_ift_val(resDir, name)
+    ift_val = _get_ift_val(resOutDir, name)
     output.append(f"{name}_iftOW:              {ift_val} ;\n")
 
-    # Cycles
     for cycle_idx, cycle in enumerate(["primary", "secondary"], 1):
         pc_file = resDir / f"pc_{cycle}.txt"
         kr_file = resDir / f"kr_{cycle}.txt"
@@ -172,18 +175,15 @@ def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv")
                 krw_vals = [row[1] for row in kr_data]
                 kro_vals = [row[2] for row in kr_data]
 
-                # Resample kr data to pc Sw values
                 for sw, pc in zip(sw_pc, pc_vals):
                     krw = interpolate(sw, sw_kr, krw_vals)
                     kro = interpolate(sw, sw_kr, kro_vals)
-                    ri = 1.0  # Dummy for now
+                    ri = 1.0
                     output.append(f"{sw:.6f}      {pc:.6e}    {krw:.6e}    {kro:.6e}    {ri:.6e}")
             else:
-                # No kr data, use zeros
                 for sw, pc in zip(sw_pc, pc_vals):
                     output.append(f"{sw:.6f}      {pc:.6e}    0.000000e+00    0.000000e+00    1.000000e+00")
         else:
-            # We have kr_data but pc_data is empty; preserve kr_data points
             for row in kr_data:
                 sw = row[0]
                 krw = row[1] if len(row) > 1 else 0.0
@@ -192,7 +192,7 @@ def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv")
                 ri = 1.0
                 output.append(f"{sw:.6f}      {pc:.6e}    {krw:.6e}    {kro:.6e}    {ri:.6e}")
 
-        output.append("")  # Empty line between cycles
+        output.append("")
 
     content = "\n".join(output)
     out_file = f"{name}{ext}"
@@ -202,6 +202,11 @@ def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv")
         f.write(f"{content}\n")
 
     disp(f"  Created: {out_path}")
+    if resOutDir != Path("."):
+        try:
+            shutil.copy(out_path, Path(".") / out_file)
+        except Exception:
+            pass
 
     return str(out_path)
 
@@ -216,12 +221,18 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
     img_size = None
     img_res = None
 
-    # Check for accompanying .mhd header
     mhd_candidates = [
         img_path.with_suffix(".mhd"),
         Path(f"{imgName}.mhd"),
         img_path.parent / f"{stem}.mhd",
     ]
+    if "ImageFile" in kwrds:
+        p = Path(kwrds["ImageFile"])
+        if p.is_file():
+            mhd_candidates.insert(0, p)
+        if p.with_suffix(".mhd").is_file():
+            mhd_candidates.insert(0, p.with_suffix(".mhd"))
+
     for mhd in mhd_candidates:
         if mhd.is_file():
             try:
@@ -251,8 +262,6 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
             img_res = float(kwrds.get("resolution", kwrds.get("voxel_size", 1e-6)))
 
     if not img_path.with_suffix(".raw").exists() and img_path.with_suffix(".raw.gz").exists():
-        import gzip
-
         raw_target = img_path.with_suffix(".raw")
         with gzip.open(img_path.with_suffix(".raw.gz"), "rb") as f_in, raw_target.open("wb") as f_out:
             shutil.copyfileobj(f_in, f_out)
@@ -294,7 +303,7 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
             if solid_v is None:
                 solid_v = 1
 
-    xpm = {
+    xpm_cfg = {
         "image": {
             "path": resolved_img_path,
             "size": img_size,
@@ -305,32 +314,33 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
         "report": {"display": "saturation", "invasion_percolation": True, "occupancy_images": False},
     }
     if darcy_list:
-        xpm["darcy"] = darcy_list
+        xpm_cfg["darcy"] = darcy_list
 
-    # 4. Map SNM keywords
-    # Contact Angle
     ca_str = kwrds.get("AlterContAng", kwrds.get("InitContAng", ""))
     if ca_str:
         parts = ca_str.split()
         if len(parts) >= 3:
             try:
                 avg_ca = (float(parts[1]) + float(parts[2])) / 2.0
-                xpm.setdefault("macro", {})["contact_angle"] = avg_ca
+                xpm_cfg.setdefault("macro", {})["contact_angle"] = avg_ca
+            except ValueError:
+                pass
+        elif len(parts) == 1:
+            try:
+                xpm_cfg.setdefault("macro", {})["contact_angle"] = float(parts[0])
             except ValueError:
                 pass
 
-    # Interfacial tension
     ift = kwrds.get("WaterOil", kwrds.get("interfacial_tension", None))
     if ift is not None:
         try:
             ift_val = float(str(ift).split()[0])
-            xpm.setdefault("macro", {})["interfacial_tension"] = ift_val
-            if "network_model" in xpm and isinstance(xpm["network_model"], dict):
-                xpm["network_model"]["interfacial_tension_n_per_m"] = ift_val
+            xpm_cfg.setdefault("macro", {})["interfacial_tension"] = ift_val
+            if "network_model" in xpm_cfg and isinstance(xpm_cfg["network_model"], dict):
+                xpm_cfg["network_model"]["interfacial_tension_n_per_m"] = ift_val
         except (ValueError, IndexError):
             pass
 
-    # Saturation steps and capillary pressure limits
     cycle1_str = kwrds.get("Cycle1", "")
     if cycle1_str:
         parts = cycle1_str.split()
@@ -338,95 +348,84 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
             try:
                 max_pc = float(parts[1])
                 if max_pc > 0:
-                    xpm.setdefault("report", {})["max_capillary_pressure"] = max_pc
+                    xpm_cfg.setdefault("report", {})["max_capillary_pressure"] = max_pc
             except ValueError:
                 pass
         if len(parts) >= 3:
             try:
                 del_sw = float(parts[2])
                 if del_sw > 0:
-                    xpm.setdefault("report", {})["capillary_pressure_sw_step"] = del_sw
-                    xpm.setdefault("report", {})["relative_permeability_sw_step"] = del_sw
+                    xpm_cfg.setdefault("report", {})["capillary_pressure_sw_step"] = del_sw
+                    xpm_cfg.setdefault("report", {})["relative_permeability_sw_step"] = del_sw
             except ValueError:
                 pass
 
     for k in ("capillary_pressure_sw_step", "sw_step", "delSw"):
         if k in kwrds:
-            xpm.setdefault("report", {})["capillary_pressure_sw_step"] = float(kwrds[k])
+            xpm_cfg.setdefault("report", {})["capillary_pressure_sw_step"] = float(kwrds[k])
     for k in ("relative_permeability_sw_step", "kr_sw_step", "delSw"):
         if k in kwrds:
-            xpm.setdefault("report", {})["relative_permeability_sw_step"] = float(kwrds[k])
+            xpm_cfg.setdefault("report", {})["relative_permeability_sw_step"] = float(kwrds[k])
     for k in ("max_capillary_pressure", "maxPc"):
         if k in kwrds:
-            xpm.setdefault("report", {})["max_capillary_pressure"] = float(kwrds[k])
+            xpm_cfg.setdefault("report", {})["max_capillary_pressure"] = float(kwrds[k])
 
     if "network_model" in kwrds and isinstance(kwrds["network_model"], dict):
-        xpm["network_model"] = kwrds["network_model"]
+        xpm_cfg["network_model"] = kwrds["network_model"]
         if ift is not None:
             try:
-                xpm["network_model"]["interfacial_tension_n_per_m"] = float(str(ift).split()[0])
+                xpm_cfg["network_model"]["interfacial_tension_n_per_m"] = float(str(ift).split()[0])
             except (ValueError, IndexError):
                 pass
 
-    # Darcy (microporous) properties: only include if there is actual microporous content.
-    # A purely binary image (void/solid) has no darcy phase and must not include this block,
-    # because an empty `cap_press` curve causes xpm to crash with a segfault.
-    # SNM keywords don't currently expose microporous info so we leave it out by default.
-    # TODO: add support for microporous phases from SNM keywords if needed.
-
-    return xpm
+    return xpm_cfg
 
 
-def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: bool = False, resDir: str = "./resultsXPM", app: str = "xpm", **kwargs) -> int:
-    """
-    Expose xpm via subprocess.Popen.
-
-    Args:
-        kwrds: Dictionary of parameters for xpm.
-        config: Path to the JSON configuration file or network name.
-        forceRun: Whether to force re-running the simulation.
-        resDir: Directory for simulation results and logs.
-        app: Path to the xpm executable.
-        **kwargs: Additional arguments like resSuffix and netDir.
-
-    Returns:
-        The return code of the xpm process.
-    """
+def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: bool = False, resDir: str = "./", app: str = "xpm", **kwargs) -> int:
+    """Run an XPM simulation using parameters from a dictionary or SNM keywords."""
     if kwrds is None:
         kwrds = {}
+    kwrds = kwrds.copy()
+    kwrds.update(kwargs)
+    extra_env = kwrds.pop("extra_env", None) or kwargs.pop("extra_env", None)
 
     resSuffix = kwargs.get("resSuffix", "")
     if resDir and resDir.endswith("/"):
         resDir = resDir[:-1]
 
-    output_name = kwrds.get("OutputName", kwrds.get("name", ""))
-    if output_name:
-        name = output_name
-    else:
-        name = Path(netnam).stem + resSuffix
+    name = kwrds.get("OutputName", kwrds.get("name", netnam if netnam else "xpm_sim"))
     log_name = f"{name}_{app}.log"
-    lognam = Path(resDir or ".") / log_name
+    log_path = Path(resDir or ".") / log_name
+    config_run = f"input_{name}_xpm.json"
 
-    if forceRun or not lognam.exists():
+    if forceRun or not log_path.is_file():
         mkdr(resDir)
 
-        # Convert kwrds to a config.json file
-        config_path = Path(resDir) / f"input_{name}_xpm.json"
+        config_path = Path(resDir) / config_run
         disp(f"Converting SNM keywords to XPM config: {Path.cwd()}/{config_path}")
 
-        netDir = kwargs.get("netDir", ".")
-        img_abs_dir = (Path(netDir) / f"{Path(netnam).stem}.raw").resolve()
+        img_file = kwrds.get("ImageFile", kwrds.get("image", ""))
+        if img_file:
+            p_img = Path(img_file)
+            if p_img.suffix in [".mhd", ".raw", ".raw.gz"]:
+                img_abs_dir = p_img.with_suffix(".raw").resolve()
+            else:
+                img_abs_dir = p_img.resolve()
+        else:
+            netDir = kwargs.get("netDir", ".")
+            img_abs_dir = (Path(netDir) / f"{Path(netnam).stem}.raw").resolve()
+
         xpm_kwrds = snm_to_xpm_json(kwrds, imgName=str(img_abs_dir))
 
         with Path(config_path).open("w", encoding="utf-8") as f:
             json.dump(xpm_kwrds, f, indent=4)
 
-        log_path = Path(lognam).resolve()
-        # Use relative path for config if it's inside resDir
-        config_run = Path(config_path).name
+        lognam = log_path
+        with Path(lognam).open("wb") as logfile:
+            disp(f"// -*- JSON -*- run_xpm, ls:\n{config_path}\n")
 
-        with log_path.open("ab") as logfile:
-            path_env = msEnv.get("PATH", "")
+            ms_bin = str(Path(msInst) / "bin") if msInst else ""
+            path_env = f"{ms_bin}:{msEnv.get('PATH', '')}" if ms_bin else msEnv.get("PATH", "")
 
             app_abs = app
             if not Path(app).is_absolute():
@@ -436,7 +435,60 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
             (Path(resDir) / "pnextract").mkdir(exist_ok=True)
 
             myenv = msEnv.copy()
+            myenv.update(os.environ)
             myenv["HWLOC_COMPONENTS"] = "-opencl"
+            if extra_env:
+                myenv.update(extra_env)
+
+            seed_src = kwrds.get("NetworkSeed", kwrds.get("SeedDir", kwrds.get("seed_dir", None)))
+            net_spec = seed_src or kwrds.get("NETWORK", kwrds.get("NetworkFile", kwrds.get("NetworkPrefix", kwrds.get("NetworkDir", netnam))))
+            if not net_spec and img_file:
+                stem = Path(img_file).stem
+                if (Path.cwd() / f"{stem}_link1.dat").exists() or (Path.cwd() / f"{stem}_node1.dat").exists():
+                    net_spec = stem
+
+            if net_spec:
+                parts = str(net_spec).split()
+                raw_target = parts[1] if (len(parts) > 1 and parts[0] in ("F", "B")) else parts[0]
+                target_p = Path(raw_target)
+                if target_p.is_file():
+                    seed_dir = target_p.parent.resolve()
+                    prefix = target_p.stem.replace("_link1", "").replace("_node1", "")
+                elif target_p.is_dir():
+                    seed_dir = target_p.resolve()
+                    prefix = ""
+                else:
+                    netDir = Path(kwargs.get("netDir", ".")).resolve()
+                    seed_dir = netDir
+                    prefix = raw_target
+
+                try:
+                    img_size = xpm_kwrds.get("image", {}).get("size") if isinstance(xpm_kwrds, dict) else None
+                    from .network_ops import seed_net_to_xpm
+
+                    pnextract_dir = Path(resDir) / "pnextract"
+                    stem = Path(img_abs_dir).stem if img_abs_dir else ""
+                    if stem:
+                        seed_net_to_xpm(
+                            seed_dir,
+                            target_dir=pnextract_dir / stem,
+                            target_prefix="",
+                            source_prefix=prefix if prefix else None,
+                            synthesize_velems=True,
+                            image_size=img_size,
+                        )
+                    seed_net_to_xpm(
+                        seed_dir,
+                        target_dir=pnextract_dir,
+                        target_prefix="",
+                        source_prefix=prefix if prefix else None,
+                        synthesize_velems=True,
+                        image_size=img_size,
+                    )
+                except Exception as e:
+                    disp(f"Notice: Python-side network staging: {e}")
+
+                myenv["XPM_PNEXTRACT_SEED_DIR"] = str(seed_dir)
 
             disp(f"\n\nRunning {app_abs} -G {config_run} in {resDir} > {log_path}")
             sys.stdout.flush()
@@ -452,8 +504,14 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
 
             assert proc.returncode == 0, f"xpm failed, see stdout and {log_path}"
 
+            if Path(resDir) != Path("."):
+                try:
+                    shutil.copy(log_path, Path(".") / log_name)
+                except Exception:
+                    pass
+
             if defaultnm == "snm":
-                xpm_json_to_snm_tsv(resDir, name=name)  # , ext="_upscal.tsv"
+                xpm_json_to_snm_tsv(resDir, name=name)
                 tsv_path = Path(resDir) / f"{name}_upscal.tsv"
                 assert tsv_path.exists(), f"{Path.cwd()}/{tsv_path} not created"
 
@@ -462,6 +520,7 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
 
 
 def xpm_json_to_mhd(config_path, ske_dir) -> Path:
+    """Generate an MHD header file corresponding to an XPM JSON configuration."""
     with Path(config_path).open("r") as f:
         config = json.load(f)
 
@@ -473,19 +532,15 @@ def xpm_json_to_mhd(config_path, ske_dir) -> Path:
 
     img_stem = Path(img_rel_path).stem
 
-    if img_stem.endswith(".raw"):  # strip .raw.gz
+    if img_stem.endswith(".raw"):
         img_stem = img_stem[:-4]
 
-    # Find the actual .raw file
     raw_path = None
-
-    # 1. Try relative to config file
-    p = (config_path.parent / img_rel_path).resolve()
+    p = (Path(config_path).parent / img_rel_path).resolve()
     if p.exists():
         shutil.copy(p, ske_dir)
-        with p.open("rb") as f_in, gzip.open(ske_dir / (f"{p.name}.gz"), "wb") as f_out:
+        with p.open("rb") as f_in, gzip.open(Path(ske_dir) / f"{p.name}.gz", "wb") as f_out:
             shutil.copyfileobj(f_in, f_out)
-    # 2. Try searching in common roots
     elif Path(str(p).replace(".raw", ".tar.gz")).exists():
         tar_path = Path(str(p).replace(".raw", ".tar.gz"))
         with tarfile.open(tar_path) as f:
@@ -493,18 +548,16 @@ def xpm_json_to_mhd(config_path, ske_dir) -> Path:
                 f.extractall(path=ske_dir, filter="data")
             else:
                 f.extractall(path=ske_dir)
-        extracted_raw = ske_dir / p.name
-        with Path(extracted_raw).open("rb") as f_in, gzip.open(ske_dir / (f"{p.name}.gz"), "wb") as f_out:
+        extracted_raw = Path(ske_dir) / p.name
+        with Path(extracted_raw).open("rb") as f_in, gzip.open(Path(ske_dir) / f"{p.name}.gz", "wb") as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-    raw_path = ske_dir / (f"{p.name}.gz")
+    raw_path = Path(ske_dir) / f"{p.name}.gz"
     assert raw_path.exists(), f"image file not found: {p.name}"
 
-    # res: resolution in meters
     res = img_info.get("resolution", 1.0)
     size = img_info.get("size", [0, 0, 0])
-
-    mhd_path = ske_dir / f"{img_stem}.mhd"
+    mhd_path = Path(ske_dir) / f"{img_stem}.mhd"
 
     mhd_content = [
         "ObjectType = Image",
@@ -524,3 +577,6 @@ def xpm_json_to_mhd(config_path, ske_dir) -> Path:
         f.write(f"{content}\n")
 
     return mhd_path
+
+
+from .network_ops import EQUILATERAL_SHAPE_FACTOR, find_network_files, seed_net_to_xpm, set_network_equilateral, set_network_shape_factor

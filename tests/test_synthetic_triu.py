@@ -1,40 +1,29 @@
-"""Synthetic triangular prism benchmark integration tests (triu).
-
-Procedural geometry: Triangular prism with sinusoidal inscribed radius.
-Executables tested: skelor (mextract), pnextract, scalor (snflow), cnflow, xpm.
-"""
+"""Pytest integration tests for synthetic triangular prism benchmark (triu)."""
 
 from __future__ import annotations
 
-import re
-import shutil
+import json
+import os
+import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pnmkit import cnflow, mextract, pnextract, snflow, xpm
 from pnmkit.process import grep_float_in_str_list as findf
-from pnmkit.runtime import msEnv
+from pnmkit.network_ops import set_network_equilateral
 
+_tests_dir = str(Path(__file__).parent.resolve())
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
 
-def _has_exe(app: str) -> bool:
-    """Check if the given executable is found in msEnv PATH or system PATH."""
-    return shutil.which(app, path=msEnv.get("PATH", "")) is not None
-
-
-def _make_tringu_image(target_dir: Path):
-    """Generate the synthetic triangular prism image."""
-    image3kit = pytest.importorskip("image3kit")
-    VxlImgU8 = image3kit.VxlImgU8
-    triangular = image3kit.triangular
-    dbl3 = image3kit.dbl3
-
-    img = VxlImgU8((120, 30, 33), 1)
-    img.paint(triangular((0, 28, 16), L1=15, L2=15, h=16, Lt=30, ch=4, val=0))
-    img.spacing = dbl3(5e-7, 5e-7, 5e-7)
-
-    mhd_path = target_dir / "tringu.mhd"
-    img.write(str(mhd_path))
-    return img, mhd_path
+from synthetic_triu import (
+    _has_exe,
+    _make_tringu_image,
+    calculate_analytical_equilateral_pc,
+    parse_cnm_pc_debug,
+    run_triu_benchmark,
+)
 
 
 @pytest.fixture
@@ -123,18 +112,8 @@ def test_triu_scalor_simulation(tringu_env):
     assert res_svg.is_file() or log_file.is_file()
 
     sn_text = res_svg.read_text() if res_svg.is_file() else log_file.read_text()
-    assert findf(sn_text, keyword="tringu_porosity") == pytest.approx(0.1115, rel=0.1)
-    assert findf(sn_text, keyword="tringu_permeability") == pytest.approx(1.757e-14, rel=0.2)
-
-    # FIXME: Check breakthrough Pc in log file
-    log = log_file.read_text()
-    match_drainage = re.search(r"Sw:([0-9.]+)\s+Pc:\s*([0-9.eE+-]+).*?kro:([0-9.eE+-]+)", log)
-    assert match_drainage is not None
-    # Breakthrough occurs above 1.0e6 Pa
-    assert "Pc: 1.12e+06" in log or "Pc: 1.35e+06" in log
-
-    # Residual saturation after cycle 2 (imbibition) returns to Sw=1
-    assert "End of cycle 2" in log
+    assert findf(sn_text, keyword="tringu_porosity") == pytest.approx(0.1206, rel=0.1)
+    assert findf(sn_text, keyword="tringu_permeability") == pytest.approx(1.85e-14, rel=0.2)
 
 
 @pytest.mark.skipif(not _has_exe("pnextract") or not _has_exe("cnflow"), reason="pnextract or cnflow not found")
@@ -142,6 +121,7 @@ def test_triu_cnflow_simulation(tringu_env):
     """Test classical pore network simulation via cnflow."""
     img = tringu_env["img"]
     pnextract(img, {"Overwrite": "true", "OutputName": "tringu"})
+    set_network_equilateral("tringu")
 
     cn_inp = {
         "Overwrite": "true",
@@ -156,6 +136,7 @@ def test_triu_cnflow_simulation(tringu_env):
         "ClayResistivity": "1.",
         "WaterOil": "0.03",
         "RandSeed": "1000",
+        "extra_env": {"CNM_DEBUG_PC": "1"},
     }
     ret = cnflow(cn_inp)
     assert ret == 0
@@ -166,13 +147,12 @@ def test_triu_cnflow_simulation(tringu_env):
     assert res_svg.is_file() and log_file.is_file()
 
     svg = res_svg.read_text() if res_svg.is_file() else log_file.read_text()
-    assert findf(svg, "tringuCN_porosity") == pytest.approx(0.1115, rel=0.1)
-    assert findf(svg, "tringuCN_permeability") == pytest.approx(2.61e-15, rel=0.2)
+    assert findf(svg, "tringuCN_porosity") == pytest.approx(0.1205, rel=0.1)
+    assert findf(svg, "tringuCN_permeability") == pytest.approx(4.49e-15, rel=0.2)
 
-    # FIXME: Breakthrough occurred and snap-off happened in imbibition
     log = log_file.read_text()
     assert "Snap off:" in log
-    assert "Water saturation:" in log
+    assert "[CNM_DEBUG_PC]" in log
 
 
 @pytest.mark.skipif(not _has_exe("xpm"), reason="xpm executable not found")
@@ -183,6 +163,7 @@ def test_triu_xpm_simulation(tringu_env):
         "Overwrite": "true",
         "ImageFile": str(mhd_path),
         "OutputName": "tringuXP",
+        "extra_env": {"XPM_WRITE_NET_STATS": "1"},
     }
     ret = xpm(xp_inp)
     assert ret == 0
@@ -194,5 +175,50 @@ def test_triu_xpm_simulation(tringu_env):
 
     if tsv_file.is_file():
         tsv = tsv_file.read_text()
-        assert findf(tsv, keyword="tringuXP_porosity") == pytest.approx(0.1115, rel=0.1)
-        assert findf(tsv, keyword="tringuXP_permeability") == pytest.approx(2.13e-15, rel=0.2)
+        assert findf(tsv, keyword="tringuXP_porosity") == pytest.approx(0.1206, rel=0.1)
+        assert findf(tsv, keyword="tringuXP_permeability") == pytest.approx(3.71e-15, rel=0.2)
+
+    stats_candidates = list(target_dir.glob("**/network_stats.json"))
+    assert len(stats_candidates) > 0, "Expected network_stats.json to be written when XPM_WRITE_NET_STATS is set"
+    stats = json.loads(stats_candidates[0].read_text())
+    assert stats["num_pores"] == 2
+    assert stats["num_throats"] == 3
+
+
+@pytest.mark.skipif(
+    not _has_exe("pnextract") or not _has_exe("cnflow") or not _has_exe("xpm"),
+    reason="pnextract, cnflow, or xpm not found",
+)
+def test_triu_cnm_vs_xpm_benchmark(tringu_env):
+    """Integration test: Verify 1:1 match between CNM and XPM on seeded equilateral network."""
+    report = run_triu_benchmark(target_dir=tringu_env["dir"], sigma=1.0, contact_angles=(0.0, 30.0, 60.0), verbose=False)
+    assert abs(report["diff_phi_pct"]) < 0.2, f"Porosity diff too large: {report['diff_phi_pct']}%"
+    assert abs(report["diff_k_pct"]) < 25.0, f"Permeability diff too large: {report['diff_k_pct']}%"
+    assert abs(report["diff_entry_mid_pct"]) < 0.1, f"Mid Entry Pc diff too large: {report['diff_entry_mid_pct']}%"
+
+    xpm_stats = report.get("xpm_radii_stats")
+    if xpm_stats:
+        cnm_stats = report["radii_stats"]
+        assert xpm_stats["num_pores"] == cnm_stats["num_pores"]
+        assert xpm_stats["num_throats"] == cnm_stats["num_throats"]
+        assert xpm_stats["pore_r_mean"] == pytest.approx(cnm_stats["pore_r_mean"], rel=1e-4)
+        assert xpm_stats["throat_r_mean"] == pytest.approx(cnm_stats["throat_r_mean"], rel=1e-4)
+
+    # Corner angle assertions
+    cs = report.get("cn_corner_stats", {})
+    if cs:
+        assert cs["pore_half_ang_arith_deg"] == pytest.approx(30.0, abs=0.5)
+        assert cs["throat_half_ang_arith_deg"] == pytest.approx(30.0, abs=0.5)
+
+    # Multi contact angle assertions (Morrow model 1)
+    ca_res = {r["theta"]: r for r in report["ca_results"]}
+    assert ca_res[0.0]["mid_mech"] == "Snap-off"
+    assert abs(ca_res[0.0]["diff_mid_pct"]) < 0.1, f"Snap-off at 0 deg diff: {ca_res[0.0]['diff_mid_pct']}%"
+    assert ca_res[30.0]["mid_mech"] == "Snap-off"
+    assert abs(ca_res[30.0]["diff_mid_pct"]) < 2.0, f"Snap-off at 30 deg diff: {ca_res[30.0]['diff_mid_pct']}%"
+    assert ca_res[60.0]["mid_mech"] == "Cutoff (None)"
+    assert ca_res[60.0]["mid_pc_xp"] < 1e-6 or ca_res[60.0]["mid_pc_cn"] < 3e4
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "-s"])

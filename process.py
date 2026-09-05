@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import glob
 import io
+import os
 import re
 import subprocess
 import sys
@@ -261,6 +262,7 @@ def set_pnm_keyword_vals(kwrds=None, caseInp="", baseInp="", endchar=";", lines=
 def run_xnflow(kwrds: dict, netnam="", resSuffix="", app="scalor", forceRun=False, resDir="./resultsSNM", netDir="../../SKE", **kwargs):
     """use this to also run pnflow/cnflow and scalor"""
     kwrds = kwrds.copy()
+    extra_env = kwrds.pop("extra_env", None) or kwargs.pop("extra_env", None)
     resDir = str(Path(resDir).absolute())
     netDir = str(Path(netDir).absolute())
     assert len(resDir) > 2
@@ -273,6 +275,8 @@ def run_xnflow(kwrds: dict, netnam="", resSuffix="", app="scalor", forceRun=Fals
     iNam = kwrds.get("OutputName", netnam + resSuffix)
     lognam = f"{resDir}/{iNam}_{app}.log"  # use same file for both log and input
     if forceRun or not Path(lognam).is_file():
+        if forceRun:
+            kwrds.setdefault("overwrite", "true")
         mkdr(resDir)
         if "stage1" in kwrds:
             kwrds.update({"NetworkDir": netDir, "OutputName": resSuffix})
@@ -307,7 +311,10 @@ def run_xnflow(kwrds: dict, netnam="", resSuffix="", app="scalor", forceRun=Fals
             f.write(b"}")  # append: same input and output file
         local_log = f"{iNam}_{app}.log"
         assert which(app, path=msEnv.get("PATH", "")), f"app {app} not found, check msInst: {msInst}"
-        proc = subprocess.Popen([app, local_log], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=resDir, env=msEnv, text=True)
+        env = msEnv.copy()
+        if extra_env is not None:
+            env.update(extra_env)
+        proc = subprocess.Popen([app, local_log], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=resDir, env=env, text=True)
         out, err = proc.communicate()
         if proc.returncode != 0:
             disp(f"--- STDOUT: {app} on {local_log} ---")
@@ -334,6 +341,7 @@ def run_ske(kwrds=None, bNam="", resSuffix="", app="skelor", forceRun=False, res
         kwrds = {}
     kwrds = kwrds.copy()
     kwrds.update(kwargs)
+    extra_env = kwrds.pop("extra_env", None) or kwargs.pop("extra_env", None)
     if resDir[-1] == "/":
         resDir = resDir[:-1]  # network dir
     if netDir[-1] == "/":
@@ -386,7 +394,10 @@ def run_ske(kwrds=None, bNam="", resSuffix="", app="skelor", forceRun=False, res
             logfile.write(f"{inam}\n{imgnam}\n".encode())
             logfile.flush()
             assert which(app, path=msEnv.get("PATH", "")), f"app {app} not found, check msInst: {msInst}"
-            proc = subprocess.Popen([app, inam], stdout=logfile, stderr=logfile, cwd=resDir, env=msEnv)
+            env = msEnv.copy()
+            if extra_env is not None:
+                env.update(extra_env)
+            proc = subprocess.Popen([app, inam], stdout=logfile, stderr=logfile, cwd=resDir, env=env)
             proc.wait()
             assert proc.returncode == 0
     elif Path(lognam).is_file():
