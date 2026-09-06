@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 from pnmkit import cnflow, mextract, pnextract, snflow, xpm
-from pnmkit.process import grep_float_in_str_list as findf
+from pnmkit.runtime import grab_scalar as findf
 
 _tests_dir = str(Path(__file__).parent.resolve())
 if _tests_dir not in sys.path:
@@ -18,7 +16,6 @@ if _tests_dir not in sys.path:
 from synthetic_lyrd import (
     _has_exe,
     _make_spheres_layer_image,
-    parse_cnm_pc_debug,
     run_lyrd_benchmark,
 )
 
@@ -108,7 +105,8 @@ def test_lyrd_scalor_simulation(sphelyr_env):
     target_dir = sphelyr_env["dir"]
     res_svg = target_dir / "sphelyrRuf_upscal.svg"
     log_file = target_dir / "sphelyrRuf_scalor.log"
-    assert res_svg.is_file() and log_file.is_file()
+    assert res_svg.is_file()
+    assert log_file.is_file()
 
     svg = res_svg.read_text() if res_svg.is_file() else log_file.read_text()
     assert findf(svg, "sphelyrRuf_porosity") == pytest.approx(0.0863, rel=0.1)
@@ -139,7 +137,8 @@ def test_lyrd_cnflow_simulation(sphelyr_env):
     target_dir = sphelyr_env["dir"]
     res_svg = target_dir / "sphelyrCN_upscal.svg"
     log_file = target_dir / "sphelyrCN_cnflow.log"
-    assert res_svg.is_file() and log_file.is_file()
+    assert res_svg.is_file()
+    assert log_file.is_file()
 
     svg = res_svg.read_text() if res_svg.is_file() else log_file.read_text()
     assert findf(svg, "sphelyrCN_porosity") == pytest.approx(0.0867, rel=0.1)

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import gzip
 import json
 import os
@@ -66,19 +67,27 @@ def _get_ift_val(resDir: str | Path, name: str) -> float:
                 with cfg_candidate.open("r", encoding="utf-8") as f:
                     cfg_data = json.load(f)
                     if isinstance(cfg_data, dict):
-                        if "network_model" in cfg_data and isinstance(cfg_data["network_model"], dict) and "interfacial_tension_n_per_m" in cfg_data["network_model"]:
+                        if (
+                            "network_model" in cfg_data
+                            and isinstance(cfg_data["network_model"], dict)
+                            and "interfacial_tension_n_per_m" in cfg_data["network_model"]
+                        ):
                             ift_val = float(cfg_data["network_model"]["interfacial_tension_n_per_m"])
                             break
-                        elif "macro" in cfg_data and isinstance(cfg_data["macro"], dict) and "interfacial_tension" in cfg_data["macro"]:
+                        if "macro" in cfg_data and isinstance(cfg_data["macro"], dict) and "interfacial_tension" in cfg_data["macro"]:
                             ift_val = float(cfg_data["macro"]["interfacial_tension"])
                             break
-                        elif "physics_contract" in cfg_data and isinstance(cfg_data["physics_contract"], dict) and "interfacial_tension_si" in cfg_data["physics_contract"]:
+                        if (
+                            "physics_contract" in cfg_data
+                            and isinstance(cfg_data["physics_contract"], dict)
+                            and "interfacial_tension_si" in cfg_data["physics_contract"]
+                        ):
                             ift_val = float(cfg_data["physics_contract"]["interfacial_tension_si"])
                             break
-                        elif "interfacial_tension" in cfg_data:
+                        if "interfacial_tension" in cfg_data:
                             ift_val = float(cfg_data["interfacial_tension"])
                             break
-                        elif "WaterOil" in cfg_data:
+                        if "WaterOil" in cfg_data:
                             ift_val = float(str(cfg_data["WaterOil"]).split()[0])
                             break
             except Exception:
@@ -103,7 +112,8 @@ def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv")
     # XPM puts results in results/<image_stem>/
     search_files = list(resDir.glob("**/phi_k_kr_pc.json"))
     if not search_files:
-        raise FileNotFoundError(f"phi_k_kr_pc.json not found in {resDir}")
+        msg = f"phi_k_kr_pc.json not found in {resDir}"
+        raise FileNotFoundError(msg)
     matching = [p for p in search_files if p.parent.name.lower() in name.lower() or name.lower() in p.parent.name.lower()]
     target_file = matching[0] if matching else max(search_files, key=lambda p: p.stat().st_mtime)
     resDir = target_file.parent
@@ -202,11 +212,9 @@ def xpm_json_to_snm_tsv(resDir: str | Path, name: str, ext: str = "_upscal.tsv")
         f.write(f"{content}\n")
 
     disp(f"  Created: {out_path}")
-    if resOutDir != Path("."):
-        try:
-            shutil.copy(out_path, Path(".") / out_file)
-        except Exception:
-            pass
+    if resOutDir != Path():
+        with contextlib.suppress(Exception):
+            shutil.copy(out_path, Path(out_file))
 
     return str(out_path)
 
@@ -215,8 +223,7 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
     """Convert SNM keywords to XPM JSON configuration."""
     img_path = Path(imgName)
     stem = img_path.stem
-    if stem.endswith(".raw"):
-        stem = stem[:-4]
+    stem = stem.removesuffix(".raw")
 
     img_size = None
     img_res = None
@@ -239,7 +246,7 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
                 for line in mhd.read_text(encoding="utf-8", errors="ignore").splitlines():
                     if line.startswith("DimSize"):
                         img_size = [int(v) for v in line.split("=")[1].split()]
-                    elif line.startswith("ElementSpacing") or line.startswith("ElementSize"):
+                    elif line.startswith(("ElementSpacing", "ElementSize")):
                         img_res = float(line.split("=")[1].split()[0])
                 if img_size and img_res:
                     break
@@ -247,11 +254,8 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
                 pass
 
     if img_size is None:
-        m_size = re.search(r"_(\d+)x(\d+)x(\d+)", stem)
-        if m_size:
-            img_size = [int(m_size.group(1)), int(m_size.group(2)), int(m_size.group(3))]
-        else:
-            img_size = kwrds.get("size", kwrds.get("DimSize", [0, 0, 0]))
+        siz = re.search(r"_(\d+)x(\d+)x(\d+)", stem)
+        img_size = [int(siz.group(1)), int(siz.group(2)), int(siz.group(3))] if siz else kwrds.get("size", kwrds.get("DimSize", [0, 0, 0]))
 
     if img_res is None:
         m_res = re.search(r"_(\d+)p(\d*)um", stem)
@@ -273,8 +277,8 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
         resolved_img_path = str(img_path)
 
     void_v = int(kwrds.get("void", 0))
-    solid_v = kwrds.get("solid", None)
-    darcy_list = kwrds.get("darcy", None)
+    solid_v = kwrds.get("solid")
+    darcy_list = kwrds.get("darcy")
 
     if solid_v is None or darcy_list is None:
         sample_bytes = b""
@@ -299,9 +303,8 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
                 solid_v = 1
             elif solid_v is None:
                 solid_v = non_void[0] if non_void else 1
-        else:
-            if solid_v is None:
-                solid_v = 1
+        elif solid_v is None:
+            solid_v = 1
 
     xpm_cfg = {
         "image": {
@@ -326,12 +329,10 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
             except ValueError:
                 pass
         elif len(parts) == 1:
-            try:
+            with contextlib.suppress(ValueError):
                 xpm_cfg.setdefault("macro", {})["contact_angle"] = float(parts[0])
-            except ValueError:
-                pass
 
-    ift = kwrds.get("WaterOil", kwrds.get("interfacial_tension", None))
+    ift = kwrds.get("WaterOil", kwrds.get("interfacial_tension"))
     if ift is not None:
         try:
             ift_val = float(str(ift).split()[0])
@@ -373,10 +374,8 @@ def snm_to_xpm_json(kwrds: dict, imgName: str) -> dict:
     if "network_model" in kwrds and isinstance(kwrds["network_model"], dict):
         xpm_cfg["network_model"] = kwrds["network_model"]
         if ift is not None:
-            try:
+            with contextlib.suppress(ValueError, IndexError):
                 xpm_cfg["network_model"]["interfacial_tension_n_per_m"] = float(str(ift).split()[0])
-            except (ValueError, IndexError):
-                pass
 
     return xpm_cfg
 
@@ -389,7 +388,6 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
     kwrds.update(kwargs)
     extra_env = kwrds.pop("extra_env", None) or kwargs.pop("extra_env", None)
 
-    resSuffix = kwargs.get("resSuffix", "")
     if resDir and resDir.endswith("/"):
         resDir = resDir[:-1]
 
@@ -407,10 +405,7 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
         img_file = kwrds.get("ImageFile", kwrds.get("image", ""))
         if img_file:
             p_img = Path(img_file)
-            if p_img.suffix in [".mhd", ".raw", ".raw.gz"]:
-                img_abs_dir = p_img.with_suffix(".raw").resolve()
-            else:
-                img_abs_dir = p_img.resolve()
+            img_abs_dir = p_img.with_suffix(".raw").resolve() if p_img.suffix in [".mhd", ".raw", ".raw.gz"] else p_img.resolve()
         else:
             netDir = kwargs.get("netDir", ".")
             img_abs_dir = (Path(netDir) / f"{Path(netnam).stem}.raw").resolve()
@@ -504,11 +499,9 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
 
             assert proc.returncode == 0, f"xpm failed, see stdout and {log_path}"
 
-            if Path(resDir) != Path("."):
-                try:
-                    shutil.copy(log_path, Path(".") / log_name)
-                except Exception:
-                    pass
+            if Path(resDir) != Path():
+                with contextlib.suppress(Exception):
+                    shutil.copy(log_path, Path(log_name))
 
             if defaultnm == "snm":
                 xpm_json_to_snm_tsv(resDir, name=name)
@@ -532,8 +525,7 @@ def xpm_json_to_mhd(config_path, ske_dir) -> Path:
 
     img_stem = Path(img_rel_path).stem
 
-    if img_stem.endswith(".raw"):
-        img_stem = img_stem[:-4]
+    img_stem = img_stem.removesuffix(".raw")
 
     raw_path = None
     p = (Path(config_path).parent / img_rel_path).resolve()
@@ -577,6 +569,3 @@ def xpm_json_to_mhd(config_path, ske_dir) -> Path:
         f.write(f"{content}\n")
 
     return mhd_path
-
-
-from .network_ops import EQUILATERAL_SHAPE_FACTOR, find_network_files, seed_net_to_xpm, set_network_equilateral, set_network_shape_factor

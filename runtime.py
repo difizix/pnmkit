@@ -192,7 +192,7 @@ def run_sh(resDir: str, script: str, logfile=None, envs=None):
         raise RuntimeError(msg)
 
 
-def grep_float_in_str(lines="", keyword="Kx=", fnamHint=""):
+def grab_scalar(lines="", keyword="Kx=", fnamHint=""):
     try:
         for ele in re.split(":|=| |,|\n|\t|;", lines.split(keyword, 1)[1], maxsplit=20):
             if len(ele):
@@ -206,16 +206,23 @@ def grep_float_in_str(lines="", keyword="Kx=", fnamHint=""):
     return float("NaN")
 
 
-def grep_float_in_file(inFIle="summary.txt", keyword="Kx="):
+def read_scalar(inFIle="summary.txt", keyword="Kx="):
     with Path(inFIle).open() as f:
         lines = f.read()
-        return grep_float_in_str(lines, keyword, inFIle)
+        return grab_scalar(lines, keyword, inFIle)
 
 
-def file_float_differs_from(inFIle, keyword, val, frac=0.01, delta=1e-32):
-    fVal = grep_float_in_file(inFIle, keyword)
+def read_deviates(inFIle, keyword, val, frac=0.01, delta=1e-32):
+    fVal = read_scalar(inFIle, keyword)
     if abs(fVal - val) < frac * abs(val) + delta:
         print(f"{inFIle} -> {keyword}: {fVal!s} ~= {val!s}")
         return 0
     print(f"{inFIle} -> {keyword}: {fVal!s} != {val!s}")
     return 1
+
+
+def cd(dest):
+    """Change current working directory, returning previous directory as a Path."""
+    prev = Path.cwd()
+    os.chdir(dest)
+    return prev

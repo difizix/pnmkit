@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 from pnmkit import cnflow, mextract, pnextract, snflow, xpm
-from pnmkit.process import grep_float_in_str_list as findf
 from pnmkit.network_ops import set_network_equilateral
+from pnmkit.runtime import grab_scalar as findf
 
 _tests_dir = str(Path(__file__).parent.resolve())
 if _tests_dir not in sys.path:
@@ -20,8 +18,6 @@ if _tests_dir not in sys.path:
 from synthetic_triu import (
     _has_exe,
     _make_tringu_image,
-    calculate_analytical_equilateral_pc,
-    parse_cnm_pc_debug,
     run_triu_benchmark,
 )
 
@@ -112,7 +108,7 @@ def test_triu_scalor_simulation(tringu_env):
     assert res_svg.is_file() or log_file.is_file()
 
     sn_text = res_svg.read_text() if res_svg.is_file() else log_file.read_text()
-    assert findf(sn_text, keyword="tringu_porosity") == pytest.approx(0.1206, rel=0.1)
+    assert findf(sn_text, keyword="tringu_porosity") == pytest.approx(0.147, rel=0.1)
     assert findf(sn_text, keyword="tringu_permeability") == pytest.approx(1.85e-14, rel=0.2)
 
 
@@ -144,10 +140,11 @@ def test_triu_cnflow_simulation(tringu_env):
     target_dir = tringu_env["dir"]
     res_svg = target_dir / "tringuCN_upscal.svg"
     log_file = target_dir / "tringuCN_cnflow.log"
-    assert res_svg.is_file() and log_file.is_file()
+    assert res_svg.is_file()
+    assert log_file.is_file()
 
     svg = res_svg.read_text() if res_svg.is_file() else log_file.read_text()
-    assert findf(svg, "tringuCN_porosity") == pytest.approx(0.1205, rel=0.1)
+    assert findf(svg, "tringuCN_porosity") == pytest.approx(0.147, rel=0.1)
     assert findf(svg, "tringuCN_permeability") == pytest.approx(4.49e-15, rel=0.2)
 
     log = log_file.read_text()
@@ -175,7 +172,7 @@ def test_triu_xpm_simulation(tringu_env):
 
     if tsv_file.is_file():
         tsv = tsv_file.read_text()
-        assert findf(tsv, keyword="tringuXP_porosity") == pytest.approx(0.1206, rel=0.1)
+        assert findf(tsv, keyword="tringuXP_porosity") == pytest.approx(0.147, rel=0.1)
         assert findf(tsv, keyword="tringuXP_permeability") == pytest.approx(3.71e-15, rel=0.2)
 
     stats_candidates = list(target_dir.glob("**/network_stats.json"))

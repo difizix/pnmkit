@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 import struct
+from pathlib import Path
+
 import numpy as np
 import pytest
-
 from pnmkit import pnextract, xpm
 from pnmkit.network_ops import (
     find_network_files,
@@ -55,7 +54,7 @@ def test_find_network_files_unprefixed(tmp_path: Path):
     (net_dir / "_node1.dat").write_text("2\n", encoding="utf-8")
     (net_dir / "_node2.dat").write_text("1\n", encoding="utf-8")
 
-    source_dir, prefix, matched = find_network_files(net_dir)
+    _source_dir, prefix, matched = find_network_files(net_dir)
     assert prefix == ""
     assert len(matched) >= 4
 
@@ -80,7 +79,7 @@ def test_seed_net_to_xpm_copy(dummy_network: Path, tmp_path: Path):
 
 def test_seed_net_to_xpm_link(dummy_network: Path, tmp_path: Path):
     target = tmp_path / "target_link"
-    seeded = seed_net_to_xpm(dummy_network, target_dir=target, target_prefix="", mode="link")
+    seed_net_to_xpm(dummy_network, target_dir=target, target_prefix="", mode="link")
 
     assert (target / "_link1.dat").is_file()
     # Check inode equivalence for hardlink

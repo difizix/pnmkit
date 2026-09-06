@@ -75,7 +75,6 @@ Physical & Percolation Pitfalls in Pore-Scale Benchmarking:
 
 from __future__ import annotations
 
-import json
 import math
 import os
 import re
@@ -83,10 +82,18 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-import pytest
-from pnmkit import cnflow, mextract, pnextract, snflow, xpm
-from pnmkit.network_ops import format_corner_angle_table, format_multi_ca_table, format_radii_comparison_table, format_radii_stats_table, get_xpm_invasion_entry_pressures, get_network_radii_statistics, load_xpm_network_statistics, parse_cnm_corner_angle_statistics, set_network_equilateral
-from pnmkit.process import grep_float_in_str_list as findf
+from pnmkit import cnflow, pnextract, xpm
+from pnmkit.network_ops import (
+    format_corner_angle_table,
+    format_multi_ca_table,
+    format_radii_comparison_table,
+    get_network_radii_statistics,
+    get_xpm_invasion_entry_pressures,
+    load_xpm_network_statistics,
+    parse_cnm_corner_angle_statistics,
+    set_network_equilateral,
+)
+from pnmkit.runtime import grab_scalar as findf
 from pnmkit.runtime import msEnv
 
 
@@ -100,7 +107,8 @@ def _make_tringu_image(target_dir: Path):
     try:
         import image3kit
     except ImportError as exc:
-        raise ImportError("image3kit is required to generate synthetic images") from exc
+        msg = "image3kit is required to generate synthetic images"
+        raise ImportError(msg) from exc
     VxlImgU8 = image3kit.VxlImgU8
     triangular = image3kit.triangular
     dbl3 = image3kit.dbl3
@@ -146,7 +154,7 @@ def calculate_analytical_equilateral_pc(r_ins: float, theta_deg: float = 0.0, si
     cos_th = math.cos(theta)
     if cos_th > 0:
         D = 3.0 * (math.pi / 2.0 - cos_th * math.cos(theta + beta) / math.sin(beta) - theta - beta)
-        r_cap_piston = r_ins / (1.0 + math.sqrt(max(0.0, 1.0 + 4.0 * G * D / (cos_th ** 2)))) / cos_th
+        r_cap_piston = r_ins / (1.0 + math.sqrt(max(0.0, 1.0 + 4.0 * G * D / (cos_th**2)))) / cos_th
         pc_entry = sigma / r_cap_piston
     else:
         pc_entry = 0.0
@@ -167,10 +175,7 @@ def run_triu_benchmark(
     verbose: bool = True,
 ) -> dict[str, Any]:
     """Execute complete triangular prism benchmark comparing CNM and XPM."""
-    if target_dir is None:
-        target_path = Path("runs/tests/benchmarks/triu").resolve()
-    else:
-        target_path = Path(target_dir).resolve()
+    target_path = Path("runs/tests/benchmarks/triu").resolve() if target_dir is None else Path(target_dir).resolve()
 
     assert "runs" in [p.name for p in target_path.parents] or "tmp" in str(target_path) or "pytest" in str(target_path), (
         f"Target directory '{target_path}' must be inside 'runs/' or a temporary directory."
@@ -236,6 +241,7 @@ def run_triu_benchmark(
         # Capillary pressures: Primary drainage
         # Middle throat is ID 5 in CNFLOW (index 1 in XPM throat array)
         import numpy as np
+
         cn_drain, _ = parse_cnm_pc_debug(cn_log)
         pc_entry_mid_cn = cn_drain.get(5, 0.0)
         mean_pc_entry_cn = float(np.mean(list(cn_drain.values()))) if cn_drain else 0.0
@@ -249,7 +255,7 @@ def run_triu_benchmark(
 
         # Analytical values for middle throat (R = 6.823568e-7 m)
         r_throat = 6.823568e-7
-        pc_entry_ana, pc_snap_ana = calculate_analytical_equilateral_pc(r_throat, sigma=sigma)
+        pc_entry_ana, _pc_snap_ana = calculate_analytical_equilateral_pc(r_throat, sigma=sigma)
 
         # Differences
         diff_phi_pct = 100.0 * (phi_xp - phi_cn) / phi_cn if phi_cn else 0.0
@@ -308,7 +314,7 @@ def run_triu_benchmark(
             res_dir_th = target_path / "results"
             xp_sec_th = get_xpm_invasion_entry_pressures(res_dir_th, cycle="secondary", sigma=sigma, pore_count=2)
             xp_pri_th = get_xpm_invasion_entry_pressures(res_dir_th, cycle="primary", sigma=sigma, pore_count=2)
-            
+
             xp_mid_val = float(xp_sec_th["throat_pc"][1]) if len(xp_sec_th.get("throat_pc", [])) > 1 else 0.0
             xp_pri_mid_val = float(xp_pri_th["throat_pc"][1]) if len(xp_pri_th.get("throat_pc", [])) > 1 else 0.0
 
@@ -326,16 +332,18 @@ def run_triu_benchmark(
             xp_avg_val = float(xp_sec_th["throat_pc"].mean()) if len(xp_sec_th.get("throat_pc", [])) > 0 else 0.0
             diff_avg_pct = 100.0 * (xp_avg_val - cn_avg_val) / cn_avg_val if abs(cn_avg_val) > 1e-3 else 0.0
 
-            ca_results.append({
-                "theta": th,
-                "mid_mech": mech,
-                "mid_pc_cn": cn_mid_val,
-                "mid_pc_xp": xp_mid_val,
-                "diff_mid_pct": diff_mid_pct,
-                "avg_pc_cn": cn_avg_val,
-                "avg_pc_xp": xp_avg_val,
-                "diff_avg_pct": diff_avg_pct,
-            })
+            ca_results.append(
+                {
+                    "theta": th,
+                    "mid_mech": mech,
+                    "mid_pc_cn": cn_mid_val,
+                    "mid_pc_xp": xp_mid_val,
+                    "diff_mid_pct": diff_mid_pct,
+                    "avg_pc_cn": cn_avg_val,
+                    "avg_pc_xp": xp_avg_val,
+                    "diff_avg_pct": diff_avg_pct,
+                }
+            )
 
         report = {
             "sigma": sigma,

@@ -35,14 +35,10 @@ from .models import (
     pNon,
     pPhi,
     pSgr,
-    pSwD,
     pSwi,
     scalImg,
     sCN,
     sE2,
-    sE3,
-    sE4,
-    sE5,
     sE7,
     sE8,
     seris,
@@ -179,7 +175,7 @@ def plot_cycls(sims=None, prps=None, icycls=None, outfile="relPerms.svg", addSum
                     if prp.icol2:
                         prp.ploT(datax, gnmSPKwoR1[:, prp.icol2], sim.styl, sim, icy, prp.icol2)
                 except Exception as e:
-                    alert(f"not enough data for {prp.name} _{prp.icycl}, sim:{sim.lgnd}, resname: {sim.resFile()}: {gnmSPKwoR1}", -1, e)
+                    alert(f"not enough data for {prp.name} _{prp.icycle}, sim:{sim.lgnd}, resname: {sim.resFile()}: {gnmSPKwoR1}", -1, e)
 
             plt.ylabel(prp.lbl)
             prp.setXAxis(prp, axp)
@@ -317,7 +313,7 @@ def plot_si_sr(simss=None, legs=None, prps=None, outfile="SiSrs.svg"):
 
         rects = []
         for sims in simss:
-            gnmSPKwoR1 = prp.grpFunc(sims, prp)
+            gnmSPKwoR1 = prp.grab_fn(sims, prp)
             gnmSPKwoR1.append([0.0, 0.0])
             gnmSPKwoR1 = np.transpose(gnmSPKwoR1)
             rects.append(prp.ploT(gnmSPKwoR1[0], gnmSPKwoR1[1] / (prp.unit), sims[0].styl)[0])
@@ -416,7 +412,7 @@ def props_dif1faz_plot(simssX=None, simssY=None, legs=None, styls=None, prpsX=No
     return difs
 
 
-def all_run_plot_xnmsp(
+def run_plot_xnm1fs(
     workdir, mtds=None, inp=None, pltNam="KabsFF", tag="", runfsims=True, forceRun=False, propsX=None, propsY=None, SimType=FlowSim, hdrs=models.mhds
 ):
     """Run cnflow-compatible of network models
@@ -429,7 +425,7 @@ def all_run_plot_xnmsp(
         inp = {}
     if mtds is None:
         mtds = [mDS, mSN, mCN]
-    disp("============ all_run_plot_xnmsp ===============")
+    disp("============ run_plot_xnm1fs ===============")
     pwd_main = Path.cwd()
     try:
         os.chdir(workdir)
@@ -527,7 +523,7 @@ def run_sensitivity_xnmsp(
             keyv2 = str(Xval)
             inp[key2] = bef2 + " " + keyv2 + " " + aft2
             disp(inp)
-            _simss, difs = all_run_plot_xnmsp(
+            _simss, difs = run_plot_xnm1fs(
                 workdir, mtds, inp, tag=key1 + keyv1 + "_" + key2 + keyv2, runfsims=runfsims, propsX=propsY, propsY=propsY, pltNam=""
             )
             disp("difs: ")
@@ -583,7 +579,7 @@ def run_sensitivity_xnmsp(
 
 def run_plot_xnm_scannings(
     mtd, pltPrfix, img, prp1s, prp2s, inp, prp1=CAdv, prp2=pSwi, doRun=True, doPlot=True, nImgs=2, clrSchem=sriGrad, addExp=False
-):  # sync with all_run_queue_xnm_two_phase
+):  # sync with all_run_xnm_2f
     inpt = copy.deepcopy(inp)
     inpt.setdefault("UpscaleBox", "0.2 0.9")
     if len(autoInitCA):
@@ -608,7 +604,7 @@ def run_plot_xnm_scannings(
             simtag = ""
             lgnd = img.name if nImgs > 1 else ""
             if len(prp2s) > 1 and prp2.name != pNon.name:
-                lgnd += (",  " if len(lgnd) else "") + prp2.lbl + "=" + str(Swi) + " "
+                lgnd += (",  " if len(lgnd) else "") + prp2.lbl + f"={Swi} "
             if len(prp1s) > 1 and prp1.name != pNon.name:
                 lgnd += (",  " if len(lgnd) else "") + prp1.lbl + "=" + str(CAp) + " "
             if len(lgnd) < 1:
@@ -636,66 +632,26 @@ def run_plot_xnm_scannings(
 
     if doPlot:
         pltTag = mtd.mNam
-        plot_cycls(simsI72Pc, plPcKrRI, icycls=plIcycls, outfile=pltPrfix + "_Swis_" + pltTag + "_PcKrRI.svg")
+        plot_cycls(simsI72Pc, plPcKrRI, icycls=plIcycls, outfile=f"{pltPrfix}_Swis_{pltTag}_PcKrRI.svg")
         if len(prp2s) > 1:
-            plot_props_compact(
-                simsI72Pc,
-                [
-                    plPc,
-                ],
-                icycls=plIcycls,
-                outfile=pltPrfix + "_Swis_" + pltTag + "_PcCmpct.svg",
-                addSummary=False,
-            )
-            plot_props_compact(
-                simsI72Pc,
-                [
-                    plKr,
-                ],
-                icycls=plIcycls,
-                outfile=pltPrfix + "_Swis_" + pltTag + "_KrCmpct.svg",
-                addSummary=False,
-            )
+            plot_props_compact(simsI72Pc, [plPc], icycls=plIcycls, outfile=f"{pltPrfix}_Swis_{pltTag}_PcCmpct.svg", addSummary=False)
+            plot_props_compact(simsI72Pc, [plKr], icycls=plIcycls, outfile=f"{pltPrfix}_Swis_{pltTag}_KrCmpct.svg", addSummary=False)
 
             if addExp:
                 simsSwI72.append([FlowSim("", "", img, mEx, sEX, {})])
                 legsI72.append("Experiment")
-            plot_si_sr(simsSwI72, legsI72, [pSgr], outfile=pltPrfix + "_Swis_" + pltTag + "_SiSr.svg")
+            plot_si_sr(simsSwI72, legsI72, [pSgr], outfile=f"{pltPrfix}_Swis_{pltTag}_SiSr.svg")
 
         simsI72Pc0 = simsI72Pc0_
-        plot_props_compact(
-            simsI72Pc0,
-            [
-                plPc,
-            ],
-            icycls=plIcycls,
-            outfile=pltPrfix + "_Swi0_" + pltTag + "_PcCmpct.svg",
-            addSummary=False,
-        )
-        plot_props_compact(
-            simsI72Pc0,
-            [
-                plKr,
-            ],
-            icycls=plIcycls,
-            outfile=pltPrfix + "_Swi0_" + pltTag + "_KrCmpct.svg",
-            addSummary=False,
-        )
-        plot_props_compact(
-            simsI72Pc0,
-            [
-                plRI,
-            ],
-            icycls=plIcycls,
-            outfile=pltPrfix + "_Swi0_" + pltTag + "_RICmpct.svg",
-            addSummary=False,
-        )
+        plot_props_compact(simsI72Pc0, [plPc], icycls=plIcycls, outfile=f"{pltPrfix}_Swi0_{pltTag}_PcCmpct.svg", addSummary=False)
+        plot_props_compact(simsI72Pc0, [plKr], icycls=plIcycls, outfile=f"{pltPrfix}_Swi0_{pltTag}_KrCmpct.svg", addSummary=False)
+        plot_props_compact(simsI72Pc0, [plRI], icycls=plIcycls, outfile=f"{pltPrfix}_Swi0_{pltTag}_RICmpct.svg", addSummary=False)
 
     return simsAll
 
 
 @monitor_func
-def all_run_queue_xnm_two_phase(
+def all_run_xnm_2f(
     workdir,
     mtds=None,
     prp1ss=None,
@@ -829,104 +785,6 @@ def mk_sensii(cmnds, prp1, prp1ss, prp2, prp2ss, mhds, kwargs, subHdrs=None, sub
     mkdr(workdir)
     disp((prp1.name, prp1ss, " ", prp2.name, prp2ss))
     if subHdrs:
-        all_run_queue_xnm_two_phase(
-            workdir,
-            [
-                mSN,
-            ],
-            prp1ss,
-            prp2ss,
-            prp1,
-            prp2,
-            cmnds,
-            hdrs=subHdrs[0],
-            **subkwargs,
-        )  # , CNM SNM,
-        return all_run_queue_xnm_two_phase(
-            workdir,
-            [
-                mSN,
-            ],
-            prp1ss,
-            prp2ss,
-            prp1,
-            prp2,
-            cmnds,
-            hdrs=mhds,
-            subHdrs=subHdrs,
-            **kwargs,
-        )  # , CNM SNM,
-    return all_run_queue_xnm_two_phase(
-        workdir,
-        [
-            mSN,
-        ],
-        prp1ss,
-        prp2ss,
-        prp1,
-        prp2,
-        cmnds,
-        hdrs=mhds,
-        **kwargs,
-    )  # , CNM SNM,
-
-
-# Outdated ?
-def all_run_plot_xnm_two_phase(workdir, mtds=None, inp=None, pltNam="", runfsims=True, prp1s=None, prp2s=None, prp1=CAdv, prp2=pSwi, plotRes=True):
-    """AllRunPlotXNMTwoPhaseOld calls run_plot_xnm_scannings
-    Experiments can not be added using this now"""
-    if prp2s is None:
-        prp2s = [0.0]
-    if prp1s is None:
-        prp1s = [[30, 60]]
-    if inp is None:
-        inp = {}
-    if mtds is None:
-        mtds = [mDS, mSN, mXP, mCN]
-    pwd_main = Path.cwd()
-    try:
-        os.chdir(workdir)
-    except OSError:
-        dbg_msg("Error cannot get into " + workdir + "/, from " + Path.cwd())
-        sys.exit(-1)
-
-    disp("svg/" + pltNam + "* *****************************")
-    if plotRes:
-        mkdr("./svg")
-
-    simss = []
-    simsRef = []
-
-    imgs = get_pwd_images()
-
-    mrkrs = copy.deepcopy([sEX, sSN, sCN, sXN, sE2, sE8, sE7, sE3, sE4, sE5])
-    mrkrs[0].markr = "o"
-    mrkrs[1].markr = "s"
-    mrkrs[2].markr = "*"
-    mrkrs[3].markr = "x"
-    mrkrs[4].markr = "^"
-    for ii in range(len(mrkrs)):
-        mrkrs[ii].ms = min(ii + 2, 4)
-        mrkrs[ii].lw = 1
-
-    ### ***** order is [mdl][img][CA-Swi]     ******
-    for jj, mtd in enumerate(mtds):
-        doPlot = plotRes and mtd.mNam not in {"DNS", "Exp"}
-        for img in imgs:
-            clrs = get_ca_sw_colors_hsv(len(prp1s), len(prp2s))
-            pltPrfix = "svg/" + pltNam + mtd.mNam + "_" + img.name + "_"
-            sims = run_plot_xnm_scannings(mtd, pltPrfix, img, prp1s, prp2s, inp, prp1, prp2, runfsims, doPlot, len(imgs), clrs)
-            if len(prp1s) > 1 and len(plIcycls) > 1:
-                plot_cyx(pltPrfix + "AmotOilRSwi.svg", sims, Amot, OilR, pSwD, mrkrs)
-            simss.append(sims)
-        if jj == 0:
-            simsRef.extend(simss[-len(imgs) :])
-        else:
-            simsRef.extend(simsRef[-len(imgs) :])
-
-    try:
-        os.chdir(pwd_main)
-    except OSError:
-        alert(f"something wrong with {pwd_main}", -1)
-
-    return (simsRef, simss)
+        all_run_xnm_2f(workdir, [mSN], prp1ss, prp2ss, prp1, prp2, cmnds, hdrs=subHdrs[0], **subkwargs)
+        return all_run_xnm_2f(workdir, [mSN], prp1ss, prp2ss, prp1, prp2, cmnds, hdrs=mhds, subHdrs=subHdrs, **kwargs)
+    return all_run_xnm_2f(workdir, [mSN], prp1ss, prp2ss, prp1, prp2, cmnds, hdrs=mhds, **kwargs)

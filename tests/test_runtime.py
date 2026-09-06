@@ -7,32 +7,32 @@ from pnmkit.runtime import (
     alert,
     dbg_msg,
     ensure,
-    file_float_differs_from,
-    grep_float_in_file,
-    grep_float_in_str,
+    grab_scalar,
+    read_deviates,
+    read_scalar,
     run_sh,
 )
 
 
-def test_grep_float_in_str_finds_value():
-    assert grep_float_in_str("effPorosity=0.35\nK_x=1.2e-13\n", "K_x=") == pytest.approx(1.2e-13)
+def test_grab_scalar_finds_value():
+    assert grab_scalar("effPorosity=0.35\nK_x=1.2e-13\n", "K_x=") == pytest.approx(1.2e-13)
 
 
-def test_grep_float_in_str_missing_keyword_returns_nan():
-    assert math.isnan(grep_float_in_str("nothing here", "K_x="))
+def test_grab_scalar_missing_keyword_returns_nan():
+    assert math.isnan(grab_scalar("nothing here", "K_x="))
 
 
-def test_grep_float_in_file(tmp_path):
+def test_read_scalar(tmp_path):
     f = tmp_path / "summary.txt"
     f.write_text("Kx=42.5\n")
-    assert grep_float_in_file(str(f), "Kx=") == pytest.approx(42.5)
+    assert read_scalar(str(f), "Kx=") == pytest.approx(42.5)
 
 
-def test_file_float_differs_from(tmp_path):
+def test_read_deviates(tmp_path):
     f = tmp_path / "summary.txt"
     f.write_text("Kx=100.0\n")
-    assert file_float_differs_from(str(f), "Kx=", 100.0) == 0
-    assert file_float_differs_from(str(f), "Kx=", 50.0) == 1
+    assert read_deviates(str(f), "Kx=", 100.0) == 0
+    assert read_deviates(str(f), "Kx=", 50.0) == 1
 
 
 def test_run_sh_success(tmp_path):

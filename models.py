@@ -15,12 +15,12 @@ import matplotlib.transforms as mtransforms
 import numpy as np
 
 from .process import (
-    grep_float_in_res,
-    grep_oil_r,
-    grep_si_sr,
-    grep_sor,
+    get_oil_r,
+    get_scalar,
+    get_si_sr,
+    get_sor,
+    get_table,
     grep_swi,
-    grep_table_in_res,
     run_cp_dns1f,
     run_par,
     run_ske,
@@ -30,7 +30,7 @@ from .process import (
 from .runtime import dbg_msg, disp, ensure
 from .xpm import run_xpm
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(conflict_handler="resolve")
 
 
 def _str_to_bool(s):
@@ -55,13 +55,14 @@ def str_arg(name, default=""):
     parser.add_argument(f"--{name}", default=default)
 
 
-def parse_args():
+def parse_args(markdown="", *args_in, **kwargs):
     str_arg("sens")  # sensitivity params
     str_arg("rTg")  # rename (retag) prop
     str_arg("mhds")  # mhd/image names
+    str_arg("markdown", default=markdown)
     bool_args(("DNS", "SKE", "snsi", "si"))  # run DNS, SNExtract or flow seni(tivity)
     args = parser.parse_args()
-    args.sens = args.sens.split(",")
+    args.sens = args.sens.split(",") if args.sens else []
     return args
 
 
@@ -244,7 +245,7 @@ def get_ca_sw_colors_hsv(nCA=5, nSw=3, dshs=None):
     return sriGradxy
 
 
-class _PloT:  # plot functor wrpping pyplot.plot, with optional uncertainty  handling for UncSim class
+class _PloT:  # plot functor wrpping plt.plot, with optional uncertainty  handling for UncSim class
     errbar = False
 
     def __init__(self, pplot=plt.plot):
@@ -312,25 +313,25 @@ AllMtds = {}
 
 
 class Method:  # this stands for simulation/.. method
-    def __init__(self, name, styl, cmdapp, outsfx="", netsfx="", runSim=run_xnflow, resPrefix=None, args=None):
+    def __init__(self, name, styl, cmdapp="", outsfx="", netsfx="", runSim=run_xnflow, res_prefix=None, args=None):
         self.setName(name)
         self.mtdstyl = styl
         self.app = cmdapp
         self.outsfx = outsfx
         self.netsfx = netsfx  # without .xmf, these are used in runSim=run_xnflow
         self.runSim = runSim  # called from FlowSim.runSim()
-        if resPrefix is not None:
-            self.resPrefix = resPrefix
+        if res_prefix is not None:
+            self.res_prefix = res_prefix
         self.args = {} if args is None else args  # simulation and arguments
 
     def setName(self, name):
         self.mNam = name  # use in serious stuff!
         self.name = name  # use in IO/logging!
         AllMtds[name] = self
-        self.resPrefix = f"results{name}/"  # resultsSNM/ etc
+        self.res_prefix = f"results{name}/"  # resultsSNM/ etc
 
     def simArgs(self):
-        return {"app": self.app, "resDir": self.resPrefix, **self.args}
+        return {"app": self.app, "resDir": self.res_prefix, **self.args}
 
     def copy(self, name):
         cp = copy.deepcopy(self)
@@ -338,26 +339,23 @@ class Method:  # this stands for simulation/.. method
         return cp
 
 
-try:
-    # Flow models
-    mEx = Method("Exp", sE1, cmdapp="", outsfx=".tsv", resPrefix="Exp/", runSim=run_skip)
-    mDS = Method("DNS", sAn, cmdapp="", outsfx="_relPerms.tsv", resPrefix="DNS/", runSim=run_cp_dns1f)
-    mCN = Method("CNM", sCN, cmdapp="cnflow", outsfx="_upscal.tsv", netsfx="Net")
-    mSN = Method("SNM", sSN, cmdapp="scalor", outsfx="_upscal.svg")
-    mXP = Method("XPM", sXN, cmdapp="xpm", outsfx="_upscal.tsv", runSim=run_xpm)
-    mDy = Method("DSY", sAn, cmdapp="", outsfx="_relPermsY.tsv", resPrefix="DNS/", runSim=run_cp_dns1f, args={"axs": "Y"})
-    mDz = Method("DSZ", sAn, cmdapp="", outsfx="_relPermsZ.tsv", resPrefix="DNS/", runSim=run_cp_dns1f, args={"axs": "Z"})
-    mAn = Method("Anl", sAn, cmdapp="")
+# Flow models
+mEx = Method("Exp", sE1, cmdapp="", outsfx=".tsv", res_prefix="Exp/", runSim=run_skip)
+mDS = Method("DNS", sAn, cmdapp="", outsfx="_relPerms.tsv", res_prefix="DNS/", runSim=run_cp_dns1f)
+mCN = Method("CNM", sCN, cmdapp="cnflow", outsfx="_upscal.tsv", netsfx="Net")
+mSN = Method("SNM", sSN, cmdapp="scalor", outsfx="_upscal.svg")
+mPN = Method("PNM", sCN, cmdapp="pnflow", outsfx="_upscal.tsv", netsfx="Net")
+mXP = Method("XPM", sXN, cmdapp="xpm", outsfx="_upscal.tsv", runSim=run_xpm)
+mDy = Method("DSY", sAn, cmdapp="", outsfx="_relPermsY.tsv", res_prefix="DNS/", runSim=run_cp_dns1f, args={"axs": "Y"})
+mDz = Method("DSZ", sAn, cmdapp="", outsfx="_relPermsZ.tsv", res_prefix="DNS/", runSim=run_cp_dns1f, args={"axs": "Z"})
+mAn = Method("Anl", sAn, cmdapp="")
 
-    # pre-processing /network extraction
-    mSK = Method("SNE", sSN, cmdapp="skelor", resPrefix="SKE/", runSim=run_ske)
-    mNE = Method("PNE", sSN, cmdapp="pnextract", resPrefix="PNE/", runSim=run_ske)
-except:
-    raise
+# pre-processing /network extraction
+mSK = Method("SNE", sSN, cmdapp="skelor", res_prefix="SKE/", runSim=run_ske)
+mNE = Method("PNE", sSN, cmdapp="pnextract", res_prefix="PNE/", runSim=run_ske)
 
 
 """ ============= class VoxImg ============== """
-
 
 class VoxImg:
     def __init__(self, name, netDir="../../SKE"):
@@ -404,14 +402,14 @@ class Prop:
     valAftr = ""  # input keyword post values
     nSkip = 0  # nSkipLines/words before val, used in getRes...
 
-    def __init__(self, name, lbl, dscr, Dy=None, kywrd="", endKy=";"):
+    def __init__(self, name, lbl, dscr, Dy=None, kywrd="", endKy=";", valpre="", valpost=""):
         if Dy is None:
             Dy = [0.0, 1.0]
         self.name: str = name  # instance variable unique to each instance
         self.lbl: str = lbl
         self.dscr: str = dscr
         self.xlbl: str = "$S_w$"
-        self.grpFunc: Callable[..., Any] = grep_table_in_res  # ideally shall be called through FlowSim.getRes
+        self.grab_fn: Callable[..., Any] = get_table  # ideally shall be called through FlowSim.getRes
         self.xcol: int = 0
         self.icol: int = 0
         self.icol2: int = 0  # icol=0 indicate scalarness (not array)
@@ -423,7 +421,7 @@ class Prop:
         self.kywrd: str = kywrd if kywrd else name
         self.endKy: str = endKy
         self.filExt: str = ""
-        self.icycl: int = 0  # mutable
+        self.icycle: int = 0  # mutable
         self.setFunc: Callable[..., Any] | None = None
         self._ploT = _PloT(plt.plot)
         AllPrps[name] = self
@@ -446,7 +444,7 @@ class Prop:
         self.Dy = Dy if Dy is not None else [0.0, 1.0]
 
     def __str__(self):
-        return self.name + (f"-cycle{self.icycl!s}" if self.icycl else "")  # +' ky:'+self.kywrd
+        return self.name + (f"-cycle{self.icycle!s}" if self.icycle else "")  # +' ky:'+self.kywrd
 
     def isArray(self):
         return self.icol
@@ -508,29 +506,29 @@ try:  #'Props' # to make it a class named `Proptis``
     plRI.small = 1.0
     plRI.setLogLog()
     OilR = Prop("OilR", "Oil Recovery, FOIP", "oil recovery factor", [0.0, 1.0])
-    OilR.grpFunc = grep_oil_r
-    OilR.icycl = 2
+    OilR.grab_fn = get_oil_r
+    OilR.icycle = 2
     pSgr = Prop("Sgr", r"$S_{gr}$", "gas residual saturation", [0.0, 0.7])
-    pSgr.grpFunc = grep_si_sr
-    pSgr.icycl = 2
+    pSgr.grab_fn = get_si_sr
+    pSgr.icycle = 2
     pSgr.xlbl = r"$S_{gi}$"
     pSor = Prop("Sor", r"$S_{or}$", "oil residual saturation", [0.0, 0.7])
-    pSor.grpFunc = grep_sor
-    pSor.icycl = 2
+    pSor.grab_fn = get_sor
+    pSor.icycle = 2
     pPhi = Prop("porosity", r"$\phi$", "porosity")
-    pPhi.grpFunc = grep_float_in_res
+    pPhi.grab_fn = get_scalar
     pKsp = Prop("permeability", r"$k_{abs}$", r"permeability \(D\)", [0.0, 1e-6])
-    pKsp.grpFunc = grep_float_in_res
+    pKsp.grab_fn = get_scalar
     pKsp.unit = 9.869233e-13
     pFF = Prop("formationfactor", r"$FF$", "formation factor", [0.0, 1000.0])
-    pFF.grpFunc = grep_float_in_res
+    pFF.grab_fn = get_scalar
     pFF.Dx = [0.01, 1.0]
     pFF.small = 1.0
     pSwD = Prop("Swi", r"$S_{wi}$", "initial water saturation", [0.0, 1.0])
-    pSwD.grpFunc = grep_swi
-    pSwD.icycl = 1
+    pSwD.grab_fn = grep_swi
+    pSwD.icycle = 1
     Amot = Prop("Amot", "Amott index", "Ammot index", [-1.0, 1.0], "AmottI")
-    Amot.grpFunc = grep_float_in_res
+    Amot.grab_fn = get_scalar
     pnTg = Prop("pnTg", "Network tag", "Network")  # efect of voxel size ...
 
     Clay = Prop("Clay", "$S_w$ sub-res.", "sub-resolution porosity", [0, 1], "AddClay")
@@ -659,8 +657,8 @@ class FlowSim:  # Flow simulation data (Method, image, parameters .series style)
         if ky in self.simres:
             return self.simres[ky]
         if icycl:
-            prp.icycl = icycl
-        res = prp.grpFunc(self, prp)
+            prp.icycle = icycl
+        res = prp.grab_fn(self, prp)
         if np.isscalar(res) and prp.Dy is not None and isinstance(res, float):
             if res < prp.Dy[0]:
                 disp(f"outside bounds, {ky}: {res!s}")
@@ -673,25 +671,25 @@ class FlowSim:  # Flow simulation data (Method, image, parameters .series style)
 
     def getRes(self, prp: Prop, icycl=0):
         ret = self.getRes_(prp, icycl)
-        if abs(prp.unit - 1) > 0.01 and prp.unit > 1e-11 and (isinstance(ret, float) or isinstance(ret, np.ndarray)):
+        if abs(prp.unit - 1) > 0.01 and prp.unit > 1e-11 and (isinstance(ret, (float, np.ndarray))):
             disp(f"{prp.name}.unit: {prp.unit}")
             return ret / prp.unit
-        else:
-            return ret
+        return ret
 
     def resName(self):
         return self.img.netname(self.mtd) + self.tag
 
     def resPath(self, prp: Prop = pNon) -> Path:
-        return Path(self.mtd.resPrefix + self.resName() + prp.filExt + self.mtd.outsfx).absolute()
+        return Path(self.mtd.res_prefix + self.resName() + prp.filExt + self.mtd.outsfx).absolute()
 
     def resFile(self, prp: Prop = pNon) -> str:
-        return str(Path(self.mtd.resPrefix + self.resName() + prp.filExt + self.mtd.outsfx).absolute())
+        return str(Path(self.mtd.res_prefix + self.resName() + prp.filExt + self.mtd.outsfx).absolute())
 
     def logPath(self) -> Path:
-        return Path(f"{self.mtd.resPrefix}{self.resName()}_{self.mtd.app}.log").absolute()
+        return Path(f"{self.mtd.res_prefix}{self.resName()}_{self.mtd.app}.log").absolute()
 
-    def getLines(self, prp: Prop) -> str:  # read and catch output files as strings
+    def getLines(self, prp: Prop) -> str:
+        """read and catch output files"""
         nam = f"_{prp.filExt}"  # = self.resFile(prp)
         if nam not in self.resStrs_:
             with self.resPath(prp).open() as f:

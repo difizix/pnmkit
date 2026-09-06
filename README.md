@@ -41,7 +41,10 @@ Transient environment variables needed by backend processes should be passed dir
 config = {
     "Overwrite": "true",
     "NETWORK": "F tringu",
-    "extra_env": {"CNM_DEBUG_PC": "1", "XPM_WRITE_NET_STATS": "1"}
+    "extra_env": {
+        "CNM_DEBUG_PC": "1",
+        "XPM_WRITE_NET_STATS": "1",
+    },
 }
 cnflow(config)
 ```

@@ -20,8 +20,7 @@ def skelor(img=None, config=None, verbose: bool = False):
         img.write(f"{output_name}.raw")
 
     kwrds = {k: v for k, v in config.items() if k not in ("OutputName", "name", "Overwrite")}
-    ret = run_ske(kwrds=kwrds, bNam=output_name, resSuffix="", app="skelor", forceRun=force_run, resDir=".", netDir=".")
-    return ret
+    return run_ske(kwrds=kwrds, bNam=output_name, resSuffix="", app="skelor", forceRun=force_run, resDir=".", netDir=".")
 
 
 def pnextract(img=None, config=None, verbose: bool = False):
@@ -49,8 +48,7 @@ def pnextract(img=None, config=None, verbose: bool = False):
         img.write(f"{output_name}.raw")
 
     kwrds = {k: v for k, v in config.items() if k not in ("OutputName", "name", "Overwrite")}
-    ret = run_ske(kwrds=kwrds, bNam=output_name, resSuffix="", app="pnextract", forceRun=force_run, resDir=".", netDir=".")
-    return ret
+    return run_ske(kwrds=kwrds, bNam=output_name, resSuffix="", app="pnextract", forceRun=force_run, resDir=".", netDir=".")
 
 
 def scalor(config: dict[str, Any], verbose: bool = False):
@@ -69,22 +67,22 @@ def scalor(config: dict[str, Any], verbose: bool = False):
     net_path = Path(network_file)
     net_dir = str(net_path.parent) if str(net_path.parent) != "" else "."
     net_stem = net_path.name
-    for suffix in ("_ms.xmf", "_pn.xmf", ".xmf"):
-        if net_stem.endswith(suffix):
-            net_stem = net_stem[: -len(suffix)]
+    for sfx in ("_ms.xmf", "_pn.xmf", ".xmf"):
+        if net_stem.endswith(sfx):
+            net_stem = net_stem[: -len(sfx)]
             break
 
     kwrds = {k: v for k, v in config.items() if k not in ("NetworkFile", "OutputName", "Overwrite")}
     kwrds["NetworkFile"] = str(net_path)
     kwrds["OutputName"] = output_name
 
-    ret = run_xnflow(kwrds=kwrds, netnam=net_stem, resSuffix="", app="scalor", forceRun=force_run, resDir=".", netDir=net_dir)
-    return ret
+    return run_xnflow(kwrds=kwrds, netnam=net_stem, resSuffix="", app="scalor", forceRun=force_run, resDir=".", netDir=net_dir)
 
 
 def cnflow(config: dict[str, Any], verbose: bool = False):
     """Run cnflow classical pore network simulation."""
     from .process import run_xnflow
+
     if verbose:
         print("Running Cnflow")
     config = config.copy()
@@ -98,9 +96,9 @@ def cnflow(config: dict[str, Any], verbose: bool = False):
         net_path = Path(network_file)
         net_dir = str(net_path.parent) if str(net_path.parent) != "" else "."
         net_stem = net_path.name
-        for suffix in ("_link1.dat", "_node1.dat", "_ms.xmf", "_pn.xmf", ".xmf", ".mhd", ".dat"):
-            if net_stem.endswith(suffix):
-                net_stem = net_stem[: -len(suffix)]
+        for sfx in ("_link1.dat", "_node1.dat", "_ms.xmf", "_pn.xmf", ".xmf", ".mhd", ".dat"):
+            if net_stem.endswith(sfx):
+                net_stem = net_stem[: -len(sfx)]
                 break
         kwrds = {k: v for k, v in config.items() if k not in ("NetworkFile", "OutputName", "Overwrite")}
         kwrds["NetworkFile"] = network_file
@@ -115,8 +113,7 @@ def cnflow(config: dict[str, Any], verbose: bool = False):
 
     kwrds["OutputName"] = output_name
 
-    ret = run_xnflow(kwrds=kwrds, netnam=net_stem, resSuffix="", app="cnflow", forceRun=force_run, resDir=".", netDir=net_dir)
-    return ret
+    return run_xnflow(kwrds=kwrds, netnam=net_stem, resSuffix="", app="cnflow", forceRun=force_run, resDir=".", netDir=net_dir)
 
 
 def pnflow(config: dict[str, Any], verbose: bool = False, exe: str = "pnflow"):
@@ -134,9 +131,9 @@ def pnflow(config: dict[str, Any], verbose: bool = False, exe: str = "pnflow"):
         net_path = Path(network_file)
         net_dir = str(net_path.parent) if str(net_path.parent) != "" else "."
         net_stem = net_path.name
-        for suffix in ("_link1.dat", "_node1.dat", "_ms.xmf", "_pn.xmf", ".xmf", ".mhd", ".dat"):
-            if net_stem.endswith(suffix):
-                net_stem = net_stem[: -len(suffix)]
+        for sfx in ("_link1.dat", "_node1.dat", "_ms.xmf", "_pn.xmf", ".xmf", ".mhd", ".dat"):
+            if net_stem.endswith(sfx):
+                net_stem = net_stem[: -len(sfx)]
                 break
     elif network_base:
         net_stem = network_base.replace("F ", "").replace("T ", "").strip()
@@ -150,8 +147,7 @@ def pnflow(config: dict[str, Any], verbose: bool = False, exe: str = "pnflow"):
     kwrds["OutputName"] = output_name
     kwrds.pop("NetworkFile", None)
 
-    ret = run_xnflow(kwrds=kwrds, netnam=net_stem, resSuffix="", app=exe, forceRun=force_run, resDir=".", netDir=net_dir)
-    return ret
+    return run_xnflow(kwrds=kwrds, netnam=net_stem, resSuffix="", app=exe, forceRun=force_run, resDir=".", netDir=net_dir)
 
 
 def xpm(config: dict[str, Any], verbose: bool = False):
@@ -169,9 +165,7 @@ def xpm(config: dict[str, Any], verbose: bool = False):
         if val:
             img_stem = Path(val.replace("F ", "").strip()).stem
             for sfx in (".raw", ".raw.gz", ".mhd", "_ms", "_pn", "_link1", "_node1"):
-                if img_stem.endswith(sfx):
-                    img_stem = img_stem[: -len(sfx)]
+                img_stem = img_stem.removesuffix(sfx)
             break
 
-    ret = run_xpm(kwrds=config, netnam=img_stem, resSuffix="", forceRun=force_run, resDir=".", app="xpm")
-    return ret
+    return run_xpm(kwrds=config, netnam=img_stem, resSuffix="", forceRun=force_run, resDir=".", app="xpm")
