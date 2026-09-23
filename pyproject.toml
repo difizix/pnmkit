@@ -33,7 +33,7 @@ foam = [
 
 [tool.setuptools]
 package-dir = {"pnmkit" = "."}
-packages = ["pnmkit", "pnmkit.foam_variants"]
+packages = ["pnmkit"]
 
 [tool.ruff]
 line-length = 160

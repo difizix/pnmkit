@@ -12,3 +12,6 @@ lint:
 format:
 	ruff check --fix .
 	ruff format .
+
+clean:
+	rm -rf __pycache__ */__pycache__ */*/__pycache__
