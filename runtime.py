@@ -52,12 +52,12 @@ _load_dotenv_parents(Path(__file__))
 
 
 def _find_msinst_dir(path):
-    """Find the directory holding the compiled xpm/snm binaries (msInst/bin or msInst/Scripts, msInst/lib).
+    """Find the directory holding the compiled xpm/snm binaries (MS_INST/bin or MS_INST/Scripts, MS_INST/lib).
 
     Supports .env in upper directories, make env, as well as global/venv pip install.
     """
-    if "msInst" in os.environ and Path(os.environ["msInst"]).exists():
-        return Path(os.environ["msInst"])
+    if "MS_INST" in os.environ and Path(os.environ["MS_INST"]).exists():
+        return Path(os.environ["MS_INST"])
     src_pnmkit = Path(path).resolve().parent
     if src_pnmkit.name == "pnmkit" and src_pnmkit.parent.name == "src":
         return src_pnmkit.parent.parent / ".venv"
@@ -80,10 +80,10 @@ def _scripts_dir(base: Path) -> Path:
 _msInst = _find_msinst_dir(__file__)
 _msInstScripts = _scripts_dir(_msInst)
 
-_msInstNote = "Note: msInst shall be a checkout's .venv (source/editable install) or sys.prefix (installed package)"
+_msInstNote = "Note: MS_INST shall be a checkout's .venv (source/editable install) or sys.prefix (installed package)"
 assert _msInstScripts.exists(), f"Error: {_msInstScripts} not found,\n{_msInstNote}"
 
-msInst = str(_msInst)
+MS_INST = str(_msInst)
 
 msEnv = os.environ.copy()
 

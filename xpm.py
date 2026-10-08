@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .process import mkdr, which
-from .runtime import disp, msEnv, msInst
+from .runtime import disp, msEnv, MS_INST
 
 defaultnm = "snm"  # move to runtime.py and use in process.py to convert tsv to json if needed
 
@@ -419,13 +419,13 @@ def run_xpm(kwrds: dict[str, Any] | None = None, netnam: str = "", forceRun: boo
         with Path(lognam).open("wb") as logfile:
             disp(f"// -*- JSON -*- run_xpm, ls:\n{config_path}\n")
 
-            ms_bin = str(Path(msInst) / "bin") if msInst else ""
+            ms_bin = str(Path(MS_INST) / "bin") if MS_INST else ""
             path_env = f"{ms_bin}:{msEnv.get('PATH', '')}" if ms_bin else msEnv.get("PATH", "")
 
             app_abs = app
             if not Path(app).is_absolute():
                 app_abs = which(app, path=path_env)
-                assert app_abs, f"{app} not found on PATH (checked {msInst} and PATH={path_env})"
+                assert app_abs, f"{app} not found on PATH (checked {MS_INST} and PATH={path_env})"
 
             (Path(resDir) / "pnextract").mkdir(exist_ok=True)
 
@@ -558,7 +558,7 @@ def xpm_json_to_mhd(config_path, ske_dir) -> Path:
         "BinaryDataByteOrderMSB = False",
         "CompressedData = True",
         "Offset = 0 0 0",
-        f"ElementSpacing = {res} {res} {res}",
+        f"ElementSize = {res} {res} {res}",
         f"DimSize = {size[0]} {size[1]} {size[2]}",
         "ElementType = MET_UCHAR",
         f"ElementDataFile = {img_stem}.raw.gz",

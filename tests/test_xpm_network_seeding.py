@@ -15,11 +15,11 @@ from pnmkit.network_ops import (
     seed_net_to_xpm,
 )
 from pnmkit.process import which
-from pnmkit.runtime import msEnv, msInst
+from pnmkit.runtime import msEnv, MS_INST
 
 
 def _has_exe(name: str) -> bool:
-    ms_bin = str(Path(msInst) / "bin") if msInst else ""
+    ms_bin = str(Path(MS_INST) / "bin") if MS_INST else ""
     path_env = f"{ms_bin}:{msEnv.get('PATH', '')}" if ms_bin else msEnv.get("PATH", "")
     return which(name, path=path_env) is not None
 

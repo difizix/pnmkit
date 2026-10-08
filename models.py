@@ -60,7 +60,7 @@ def parse_args(markdown="", *args_in, **kwargs):
     str_arg("rTg")  # rename (retag) prop
     str_arg("mhds")  # mhd/image names
     str_arg("markdown", default=markdown)
-    bool_args(("DNS", "SKE", "snsi", "si"))  # run DNS, SNExtract or flow seni(tivity)
+    bool_args(("DNS", "SKE", "snsi", "si"))  # run DNS, SKElor or flow seni(tivity)
     args = parser.parse_args()
     args.sens = args.sens.split(",") if args.sens else []
     return args
@@ -351,7 +351,7 @@ mDz = Method("DSZ", sAn, cmdapp="", outsfx="_relPermsZ.tsv", res_prefix="DNS/", 
 mAn = Method("Anl", sAn, cmdapp="")
 
 # pre-processing /network extraction
-mSK = Method("SNE", sSN, cmdapp="skelor", res_prefix="SKE/", runSim=run_ske)
+mSK = Method("SKE", sSN, cmdapp="skelor", res_prefix="SKE/", runSim=run_ske)
 mNE = Method("PNE", sSN, cmdapp="pnextract", res_prefix="PNE/", runSim=run_ske)
 
 

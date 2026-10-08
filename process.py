@@ -13,7 +13,7 @@ from shutil import which
 
 import numpy as np
 
-from .runtime import alert, dbg_msg, disp, ensure, grab_scalar, mkdr, msEnv, msInst, run_sh
+from .runtime import alert, dbg_msg, disp, ensure, grab_scalar, mkdr, msEnv, MS_INST, run_sh
 
 # import logging;  logging.basicConfig(level=logging.DEBUG, format='(%(threadName)-5s) %(message)s',)
 
@@ -317,7 +317,7 @@ def run_xnflow(kwrds: dict, netnam="", resSuffix="", app="scalor", forceRun=Fals
         with Path(lognam).open("ab") as f:
             f.write(b"}")  # append: same input and output file
         local_log = f"{iNam}_{app}.log"
-        assert which(app, path=msEnv.get("PATH", "")), f"app {app} not found, check msInst: {msInst}"
+        assert which(app, path=msEnv.get("PATH", "")), f"app {app} not found, check MS_INST: {MS_INST}"
         env = msEnv.copy()
         if extra_env is not None:
             env.update(extra_env)
@@ -399,7 +399,7 @@ def run_ske(kwrds=None, bNam="", resSuffix="", app="skelor", forceRun=False, res
             logfile.write(b"// -*- C -*- run_ske, ls:\n")
             logfile.write(f"{inam}\n{imgnam}\n".encode())
             logfile.flush()
-            assert which(app, path=msEnv.get("PATH", "")), f"app {app} not found, check msInst: {msInst}"
+            assert which(app, path=msEnv.get("PATH", "")), f"app {app} not found, check MS_INST: {MS_INST}"
             env = msEnv.copy()
             if extra_env is not None:
                 env.update(extra_env)
